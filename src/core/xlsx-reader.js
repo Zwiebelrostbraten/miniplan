@@ -17,7 +17,7 @@ export async function parseWorkbook(input, source = 'Datei.xlsx') {
   const activeTab = workbook.views?.[0]?.activeTab ?? 0;
   const sheet = workbook.worksheets[activeTab] ?? workbook.worksheets[0];
   const rows = [];
-  sheet.eachRow((row) => {
+  sheet.eachRow({ includeEmpty: true }, (row) => {
     rows.push([1, 2, 3, 4, 5].map((column) => cellValue(row.getCell(column))));
   });
   return parseRows(rows, source);

@@ -1,15 +1,16 @@
-import rules from './data/services.json';
+import defaultRules from './data/services.json';
 import holidays from './data/feiertage_baden_wuerttemberg.ics';
 import schoolHolidays from './data/ferien_baden_wuerttemberg.ics';
 import carnivalHolidays from './data/faschingsferien_bis_2030.ics';
 import { HolidayCalendar } from './core/calendar.js';
 import { parsePdf } from './core/pdf-reader.js';
-import { buildSchedule } from './core/schedule.js';
+import { buildSchedule, validateRules } from './core/schedule.js';
 import { createMiniplanWorkbook, downloadWorkbook } from './core/xlsx-export.js';
 import { createOpenSpreadsheet, downloadOpenSpreadsheet, parseOpenSpreadsheet } from './core/open-spreadsheet.js';
 import { parseWorkbook } from './core/xlsx-reader.js';
+import { miniplanFilename } from './core/filename.js';
 
-const calendar = HolidayCalendar.fromIcsTexts([holidays, schoolHolidays, carnivalHolidays]);
+const defaultCalendar = HolidayCalendar.fromIcsTexts([holidays, schoolHolidays, carnivalHolidays]);
 const state = { services: [], diagnostics: [], plan: [] };
 const $ = (id) => document.getElementById(id);
 const fields = ['date', 'start', 'end', 'name', 'location', 'dayInfo'];
@@ -82,6 +83,7 @@ async function importFile(file) {
 
 async function importFiles(files) {
   if (!files.length) return;
+  invalidatePlan();
   renderSelectedFiles(files);
   message('Dateien werden lokal verarbeitet …');
   try {
@@ -91,7 +93,14 @@ async function importFiles(files) {
     invalidatePlan();
     renderServices(); renderDiagnostics();
     message(`${state.services.length} Gottesdienste eingelesen. Bitte kurz prüfen.`);
-  } catch (error) { message(error.message || 'Die Datei konnte nicht gelesen werden.', true); }
+  } catch (error) {
+    state.services = [];
+    state.diagnostics = [];
+    invalidatePlan();
+    renderServices();
+    renderDiagnostics();
+    message(error.message || 'Die Datei konnte nicht gelesen werden.', true);
+  }
 }
 
 function addService() {
@@ -107,17 +116,35 @@ function loadDemo() {
   ]; state.diagnostics = []; invalidatePlan(); renderServices(); renderDiagnostics(); message('Beispieldaten geladen.');
 }
 
-function createPlan() {
-  const parish = $('parish').value.trim() || 'St. Georg';
-  state.plan = buildSchedule(state.services, rules, calendar, parish);
-  if (!state.plan.length) { message('Keine passenden Gottesdienste für diese Gemeinde gefunden.', true); return; }
-  $('plan-preview').hidden = false;
-  const preview = $('plan-preview'); preview.replaceChildren();
-  const title = document.createElement('h3'); title.textContent = `${state.plan.length} Einträge für den Miniplan`;
-  const list = document.createElement('ul');
-  state.plan.slice(0, 6).forEach((item) => { const line = document.createElement('li'); line.textContent = `${item.date} · ${item.start ?? '–'} · ${item.label} (${item.duties.filter(Boolean).join(', ') || 'Wochendienst'})`; list.append(line); });
-  if (state.plan.length > 6) { const more = document.createElement('li'); more.textContent = `… und ${state.plan.length - 6} weitere`; list.append(more); }
-  preview.append(title, list); $('download').disabled = false; message('Miniplan ist bereit zum Export.');
+async function planningConfig() {
+  let rules = defaultRules;
+  const ruleFile = $('rules-input').files[0];
+  if (ruleFile) rules = JSON.parse(await ruleFile.text());
+  validateRules(rules);
+
+  if ($('no-calendar').checked) return { rules, calendar: new HolidayCalendar() };
+  const calendarFiles = [...$('calendar-input').files];
+  if (!calendarFiles.length) return { rules, calendar: defaultCalendar };
+  return { rules, calendar: HolidayCalendar.fromIcsTexts(await Promise.all(calendarFiles.map((file) => file.text()))) };
+}
+
+async function createPlan() {
+  try {
+    const parish = $('parish').value.trim() || 'St. Georg';
+    const { rules, calendar } = await planningConfig();
+    state.plan = buildSchedule(state.services, rules, calendar, parish);
+    if (!state.plan.length) { message('Keine passenden Gottesdienste für diese Gemeinde gefunden.', true); return; }
+    $('plan-preview').hidden = false;
+    const preview = $('plan-preview'); preview.replaceChildren();
+    const title = document.createElement('h3'); title.textContent = `${state.plan.length} Einträge für den Miniplan`;
+    const list = document.createElement('ul');
+    state.plan.slice(0, 6).forEach((item) => { const line = document.createElement('li'); line.textContent = `${item.date} · ${item.start ?? '–'} · ${item.label} (${item.duties.filter(Boolean).join(', ') || 'Wochendienst'})`; list.append(line); });
+    if (state.plan.length > 6) { const more = document.createElement('li'); more.textContent = `… und ${state.plan.length - 6} weitere`; list.append(more); }
+    preview.append(title, list); $('download').disabled = false; message('Miniplan ist bereit zum Export.');
+  } catch (error) {
+    invalidatePlan();
+    message(error.message || 'Regeln oder Kalender konnten nicht gelesen werden.', true);
+  }
 }
 
 async function download() {
@@ -127,7 +154,7 @@ async function download() {
     if (!state.plan.length) { message('Bitte zuerst den Miniplan vorbereiten.', true); return; }
     const first = state.plan[0].date.split('-').reverse().join('.');
     const last = state.plan.at(-1).date.split('-').reverse().join('.');
-    const filename = `${parish} - Miniplan vom ${first} - ${last}.${format}`;
+    const filename = miniplanFilename(parish, first, last, format);
     if (format === 'xlsx') {
       const bytes = await createMiniplanWorkbook(state.plan, parish);
       downloadWorkbook(bytes, filename);
@@ -145,6 +172,11 @@ $('load-demo').addEventListener('click', loadDemo);
 $('create-plan').addEventListener('click', createPlan);
 $('download').addEventListener('click', download);
 $('parish').addEventListener('input', invalidatePlan);
+for (const id of ['rules-input', 'calendar-input']) $(id).addEventListener('change', invalidatePlan);
+$('no-calendar').addEventListener('change', () => {
+  $('calendar-input').disabled = $('no-calendar').checked;
+  invalidatePlan();
+});
 for (const eventName of ['dragenter', 'dragover']) $('file-input').closest('.dropzone').addEventListener(eventName, (event) => { event.preventDefault(); event.currentTarget.classList.add('dragging'); });
 for (const eventName of ['dragleave', 'drop']) $('file-input').closest('.dropzone').addEventListener(eventName, (event) => { event.preventDefault(); event.currentTarget.classList.remove('dragging'); });
 $('file-input').closest('.dropzone').addEventListener('drop', (event) => importFiles(event.dataTransfer.files));

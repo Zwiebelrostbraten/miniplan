@@ -29,11 +29,7 @@ export function parseGermanDate(value) {
 
 export function parseTime(value) {
   if (value instanceof Date && !Number.isNaN(value.valueOf())) {
-    return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
-  }
-  if (typeof value === 'number' && value >= 0 && value < 1) {
-    const totalMinutes = Math.round(value * 24 * 60) % (24 * 60);
-    return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
+    return `${String(value.getUTCHours()).padStart(2, '0')}:${String(value.getUTCMinutes()).padStart(2, '0')}`;
   }
   const text = normalizeText(value);
   const match = TIME_PATTERN.exec(text);
@@ -58,4 +54,14 @@ export function addDays(isoDate, amount) {
   const date = new Date(`${isoDate}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + amount);
   return date.toISOString().slice(0, 10);
+}
+
+// Python sorts strings by Unicode codepoint rather than the browser locale.
+export function compareText(a, b) {
+  const left = Array.from(a, (character) => character.codePointAt(0));
+  const right = Array.from(b, (character) => character.codePointAt(0));
+  for (let index = 0; index < Math.min(left.length, right.length); index += 1) {
+    if (left[index] !== right[index]) return left[index] - right[index];
+  }
+  return left.length - right.length;
 }

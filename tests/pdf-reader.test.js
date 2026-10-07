@@ -5,6 +5,12 @@ const item = (str, x, y, width = str.length * 5) => ({ str, width, transform: [1
 const PAGE_WIDTH = 595.247;
 
 describe('rowsFromTextItems', () => {
+  it('uses actual glyph widths for words crossing a column boundary', () => {
+    const run = item('/ Pfr. Stegmaier', 166.4, 640, 69.37);
+    run.characterWidths = [2.77, 2.77, 6.66, 2.77, 3.33, 2.77, 2.77, 6.66, 2.77, 5.56, 5.56, 8.33, 5.56, 2.22, 5.56, 3.33];
+    expect(rowsFromTextItems([run], PAGE_WIDTH)).toEqual([['', '', '/ Pfr.', 'Stegmaier', '']]);
+  });
+
   it('groups PDF text by row and maps five relative columns', () => {
     const rows = rowsFromTextItems([
       item('Mittwoch,', 20, 700), item('1. Juli 2026', 180, 700),

@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { germanDate, weekdayIndex } from './normalize.js';
+import { germanDate, weekdayIndex, compareText } from './normalize.js';
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const INFO = 'Standardmäßig 15min. vorher da sein, außer es steht beim jeweiligen Gottesdienst etwas anderes.';
@@ -11,7 +11,7 @@ function safeText(value) {
 
 export async function createMiniplanWorkbook(entries, parish = 'St. Georg') {
   if (!entries.length) throw new Error('Der Miniplan ist leer; es wird keine Excel-Datei erzeugt.');
-  const ordered = [...entries].sort((a, b) => `${a.date} ${a.start ?? '00:00'}`.localeCompare(`${b.date} ${b.start ?? '00:00'}`));
+  const ordered = [...entries].sort((a, b) => compareText(a.date, b.date) || compareText(a.start ?? '', b.start ?? ''));
   const start = ordered[0].date;
   const end = ordered.at(-1).date;
   const title = `${parish} - Miniplan vom ${germanDate(start)} - ${germanDate(end)}`;
@@ -33,8 +33,8 @@ export async function createMiniplanWorkbook(entries, parish = 'St. Georg') {
   for (const item of ordered) {
     const duties = item.duties.length ? item.duties : [''];
     duties.forEach((duty, index) => sheet.addRow(index === 0
-      ? [WEEKDAYS[weekdayIndex(item.date)], germanDate(item.date), item.start ?? '', safeText(item.label), safeText(duty), '', '']
-      : ['', '', '', '', safeText(duty), '', '']));
+      ? [WEEKDAYS[weekdayIndex(item.date)], germanDate(item.date), item.start ?? null, safeText(item.label), duty ? safeText(duty) : null, null, null]
+      : [null, null, null, null, duty ? safeText(duty) : null, null, null]));
     sheet.addRow([]);
   }
   const border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };

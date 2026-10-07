@@ -1,11 +1,14 @@
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
+import { WorkerMessageHandler } from 'pdfjs-dist/build/pdf.worker.mjs';
 import { normalizeText, parseGermanDate, parseTime } from './normalize.js';
 
-// pdfjs-dist v4 requires an explicit worker source in the browser (the Node
-// fallback only auto-configures itself). The fake worker (disableWorker) then
-// dynamically imports this module, which build.mjs copies into dist/.
+// Keep PDF processing available when the packaged HTML is opened via file://.
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'miniplan.worker.js';
+  // Bundle the worker handler into the offline app. PDF.js then uses this
+  // in-process fake worker instead of dynamically importing a file:// module,
+  // which browsers deliberately block for a locally opened HTML file.
+  globalThis.pdfjsWorker = { WorkerMessageHandler };
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('miniplan.worker.js', window.location.href).href;
 }
 
 const Y_TOLERANCE = 2.5;
@@ -23,12 +26,14 @@ function columnFor(x, width) {
 export function rowsFromTextItems(items, width = 595.247) {
   const ordered = items
     .flatMap((item) => {
-      const text = normalizeText(item.str);
+      const text = item.str;
       const words = [...text.matchAll(/\S+/g)];
       const unit = Number.isFinite(item.width) && text.length ? item.width / text.length : 0;
       return words.map((match) => ({
         text: match[0],
-        x: item.transform[4] + (match.index * unit),
+        x: item.transform[4] + (item.characterWidths
+          ? item.characterWidths.slice(0, match.index).reduce((sum, width) => sum + width, 0)
+          : match.index * unit),
         y: item.transform[5],
       }));
     })
@@ -121,15 +126,44 @@ export function parseRows(rows, source) {
 }
 
 export async function parsePdf(input, source = 'Datei.pdf') {
-  const document = await pdfjsLib.getDocument({ data: new Uint8Array(input), disableWorker: true }).promise;
+  const document = await pdfjsLib.getDocument({ data: new Uint8Array(input), disableWorker: true, fontExtraProperties: true }).promise;
   const rows = [];
+  const pages = [];
   for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
     const page = await document.getPage(pageNumber);
+    // Loading the operators exposes the embedded font metrics. PDF.js 4.10
+    // exports these when fontExtraProperties is enabled; retain the geometric
+    // fallback for fonts without a usable Unicode map.
+    await page.getOperatorList();
     const content = await page.getTextContent();
+    const fontWidths = new Map();
+    for (const item of content.items) {
+      if (!item.str || !item.fontName) continue;
+      if (!fontWidths.has(item.fontName)) {
+        const font = page.commonObjs.get(item.fontName);
+        const widths = new Map();
+        Object.entries(font.toUnicode?._map ?? {}).forEach(([code, character]) => {
+          widths.set(character, font.widths?.[code] ?? font.defaultWidth);
+        });
+        fontWidths.set(item.fontName, widths);
+      }
+      const widths = fontWidths.get(item.fontName);
+      const characters = item.str.split('');
+      if (characters.every((character) => widths.has(character))) {
+        const advances = characters.map((character) => widths.get(character));
+        const total = advances.reduce((sum, width) => sum + width, 0);
+        if (total > 0) item.characterWidths = advances.map((width) => width * item.width / total);
+      }
+    }
     const width = page.view[2] - page.view[0];
-    rows.push(...rowsFromTextItems(content.items, width));
+    const pageRows = rowsFromTextItems(content.items, width);
+    rows.push(...pageRows);
+    pages.push(...pageRows.map(() => pageNumber));
   }
   const result = parseRows(rows, source);
+  for (const item of [...result.services, ...result.diagnostics]) {
+    item.row = pages[item.row - 1];
+  }
   if (!result.services.length) result.diagnostics.push({ level: 'error', message: 'Im PDF wurden keine Gottesdienste erkannt', source, row: null });
   return result;
 }

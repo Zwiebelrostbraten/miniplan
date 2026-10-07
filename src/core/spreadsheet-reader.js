@@ -1,7 +1,7 @@
 import { normalizeText, parseGermanDate, parseTime } from './normalize.js';
 
 function looksLikeDate(value) {
-  return /^(?:Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),/.test(normalizeText(value));
+  return /^(?:Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),/i.test(normalizeText(value));
 }
 
 export function parseRows(rows, source) {

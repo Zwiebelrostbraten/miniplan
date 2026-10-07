@@ -38,6 +38,12 @@ Die aktuelle Version unter https://zwiebelrostbraten.github.io/miniplan/ öffnen
 
 Alle drei Exportwege funktionieren komplett im Browser.
 
+Unter **Erweiterte Einstellungen** lassen sich eine eigene Regeldatei (`services.json`)
+und eigene ICS-Kalender auswählen. Eigene Kalender ersetzen die mitgelieferten
+Kalender. Die Option „Ferien- und Feiertagsprüfung deaktivieren“ entspricht
+Python mit einer leeren Kalenderliste. Änderungen an diesen Einstellungen oder
+ein neuer Import machen einen zuvor vorbereiteten Export ungültig.
+
 ### Vollständig lokal
 
 Nach einem Build liegen die Dateien in `dist/`. Den gesamten Ordner zusammenhalten und `dist/miniplan.html` im Browser öffnen. Die vier Laufzeitdateien dürfen nicht getrennt werden:
@@ -88,3 +94,27 @@ Der Deployment-Workflow führt vor jeder Veröffentlichung automatisch Tests, Li
 ## Lizenz
 
 [MIT](LICENSE)
+
+### Browser-Parität mit Python prüfen
+
+`scripts/browser-parity.mjs` öffnet `dist/miniplan.html` direkt über `file://`
+in Chromium (Zeitzone Europe/Berlin). Es vergleicht PDF- und XLSX-Import,
+Diagnosen, Plan und exportierte Tabellenzellen mit der Python-Referenz und prüft
+ODS sowie die erweiterten Einstellungen und fehlgeschlagene Ersatzimporte.
+Playwright ist als Entwicklungsabhängigkeit im Lockfile festgelegt. Voraussetzung
+sind das passende Chromium sowie die Python-Referenz mit ihren Abhängigkeiten
+und der PDF-Testdatei unter `../miniplan-optimized`.
+
+```sh
+npm ci
+npx playwright install chromium
+# Unter Linux bei fehlenden Systembibliotheken: npx playwright install --with-deps chromium
+uv sync --project ../miniplan-optimized --frozen
+npm run test:browser
+```
+
+Der Test verwendet automatisch die `.venv` der Python-Referenz, andernfalls
+`python3`; `PYTHON=/absolute/path/to/python` überschreibt diese Auswahl.
+`MINIPLAN_REFERENCE` überschreibt den Referenzordner. Für ein bereits installiertes
+Chromium kann `AGENT_BROWSER_EXECUTABLE_PATH` gesetzt werden. Der Test meldet den
+Pfad zu seinen temporären Testdateien und Downloads.

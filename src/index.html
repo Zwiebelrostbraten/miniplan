@@ -19,6 +19,7 @@
       <label class="dropzone" for="file-input"><input id="file-input" type="file" accept=".pdf,.xlsx,.ods,.csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.oasis.opendocument.spreadsheet,text/csv" multiple><strong>Dateien auswählen</strong><span>oder hierher ziehen · PDF, XLSX, ODS und CSV</span></label>
       <ul id="selected-files" class="selected-files" aria-live="polite"><li class="file-placeholder">Noch keine Datei ausgewählt.</li></ul>
       <div class="options"><label>Gemeinde <input id="parish" value="St. Georg" autocomplete="organization"></label><button id="load-demo" class="ghost" type="button">Beispieldaten laden</button></div>
+      <details class="advanced-options"><summary>Erweiterte Einstellungen</summary><p>Optional dieselben Regel- und Kalender-Überschreibungen wie im Python-Programm verwenden. Dateien bleiben lokal.</p><div class="options"><label>Eigene Regeln <input id="rules-input" type="file" accept=".json,application/json"></label><label>Eigene Kalender <input id="calendar-input" type="file" accept=".ics,text/calendar" multiple></label><label class="check"><input id="no-calendar" type="checkbox"> Ferien- und Feiertagsprüfung deaktivieren</label></div></details>
     </section>
 
     <section class="card" aria-labelledby="review-title">

@@ -3,6 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { createMiniplanWorkbook } from '../src/core/xlsx-export.js';
 
 describe('createMiniplanWorkbook', () => {
+  it('prints untimed entries before midnight services like Python', async () => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await createMiniplanWorkbook([
+      { date: '2026-07-05', start: '00:00', label: 'Nachtmesse', duties: [] },
+      { date: '2026-07-05', start: null, label: 'Wochendienst', duties: [] },
+    ]));
+    expect(workbook.getWorksheet('Miniplan').getCell('D3').value).toBe('Wochendienst');
+  });
+
   it('creates the printable Miniplan layout and protects formula-like text', async () => {
     const bytes = await createMiniplanWorkbook([
       { date: '2026-07-01', start: '18:30', label: '=Eu', duties: ['+Altar', 'Sammler'] },
@@ -17,6 +26,8 @@ describe('createMiniplanWorkbook', () => {
     expect(sheet.getCell('E3').value).toBe("'+Altar");
     expect(sheet.getCell('E4').value).toBe('Sammler');
     expect(sheet.getCell('A1').fill.fgColor.argb).toBe('FFD9EAD3');
+    expect(sheet.getCell('C4').value).toBeNull();
+    expect(sheet.getCell('F3').value).toBeNull();
     expect(sheet.columns.map((column) => column.width)).toEqual([5, 13, 8, 22, 18, 20, 20]);
   });
 

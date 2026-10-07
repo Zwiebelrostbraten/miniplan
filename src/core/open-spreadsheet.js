@@ -1,6 +1,6 @@
 import * as SheetJS from '@e965/xlsx';
 import JSZip from 'jszip';
-import { germanDate, weekdayIndex } from './normalize.js';
+import { germanDate, weekdayIndex, compareText } from './normalize.js';
 import { parseRows } from './spreadsheet-reader.js';
 
 const OPEN_FORMATS = new Set(['ods', 'csv']);
@@ -13,7 +13,7 @@ function safeText(value) {
 }
 
 function orderedEntries(entries) {
-  return [...entries].sort((a, b) => `${a.date} ${a.start ?? '00:00'}`.localeCompare(`${b.date} ${b.start ?? '00:00'}`));
+  return [...entries].sort((a, b) => compareText(a.date, b.date) || compareText(a.start ?? '', b.start ?? ''));
 }
 
 function csvRows(entries, parish) {

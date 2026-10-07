@@ -10,6 +10,15 @@ function createOds(rows) {
 }
 
 describe('parseOpenSpreadsheet', () => {
+  it('prints untimed entries before midnight services in ODS', async () => {
+    const bytes = await createOpenSpreadsheet([
+      { date: '2026-07-05', start: '00:00', label: 'Nachtmesse', duties: [] },
+      { date: '2026-07-05', start: null, label: 'Wochendienst', duties: [] },
+    ]);
+    const workbook = SheetJS.read(bytes, { type: 'array' });
+    expect(workbook.Sheets.Miniplan.D3.v).toBe('Wochendienst');
+  });
+
   it('reads an OpenDocument Spreadsheet using the same Miniplan row rules', async () => {
     const bytes = createOds([
       ['Mittwoch, 1. Juli 2026'],
