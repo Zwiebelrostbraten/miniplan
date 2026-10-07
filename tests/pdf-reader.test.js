@@ -5,6 +5,16 @@ const item = (str, x, y, width = str.length * 5) => ({ str, width, transform: [1
 const PAGE_WIDTH = 595.247;
 
 describe('rowsFromTextItems', () => {
+  it.each([false, true])('keeps a long source name run in its starting column (glyph widths: %s)', (withGlyphWidths) => {
+    const name = 'Wortgottesdienst mit Kommunionfeier (Tausch mit St. Maria';
+    const run = item(name, 166.4, 640, 264.29);
+    if (withGlyphWidths) run.characterWidths = Array.from(name, () => run.width / name.length);
+    expect(rowsFromTextItems([
+      item('10:30', 90.95, 640), item('11:30', 126.15, 640),
+      run, item('Kirche St. Georg', 442.95, 640, 73.85),
+    ], PAGE_WIDTH)).toEqual([['', '10:30', '11:30', name, 'Kirche St. Georg']]);
+  });
+
   it('keeps a wrapped celebrant name together using glyph widths', () => {
     const run = item('/ Pfr. Stegmaier', 166.4, 640, 69.37);
     run.characterWidths = [2.77, 2.77, 6.66, 2.77, 3.33, 2.77, 2.77, 6.66, 2.77, 5.56, 5.56, 8.33, 5.56, 2.22, 5.56, 3.33];

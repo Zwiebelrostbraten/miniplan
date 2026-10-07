@@ -32,6 +32,8 @@ export function rowsFromTextItems(items, width = 595.247) {
       const unit = Number.isFinite(item.width) && text.length ? item.width / text.length : 0;
       return words.map((match) => ({
         text: match[0],
+        // Words retain their source run's column even when the run crosses a boundary.
+        column: columnFor(item.transform[4], width),
         x: item.transform[4] + (item.characterWidths
           ? item.characterWidths.slice(0, match.index).reduce((sum, width) => sum + width, 0)
           : match.index * unit),
@@ -49,7 +51,7 @@ export function rowsFromTextItems(items, width = 595.247) {
     }
     line.y = ((line.y * line.count) + item.y) / (line.count + 1);
     line.count += 1;
-    line.items.push({ text: item.text, x: item.x });
+    line.items.push({ text: item.text, x: item.x, column: item.column });
   }
 
   const rows = [];
@@ -57,8 +59,7 @@ export function rowsFromTextItems(items, width = 595.247) {
     const lineText = normalizeText(line.items.map(({ text }) => text).join(' '));
     if (IGNORED_TEXT.some((prefix) => lineText.startsWith(prefix))) continue;
     const columns = ['', '', '', '', ''];
-    for (const { text, x } of line.items.sort((a, b) => a.x - b.x)) {
-      const column = columnFor(x, width);
+    for (const { text, column } of line.items.sort((a, b) => a.x - b.x)) {
       columns[column] = normalizeText(`${columns[column]} ${text}`);
     }
     if (looksLikeDate(columns[0])) rows.push([normalizeText(columns.join(' ')), '', '', '', '']);

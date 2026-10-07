@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import { parsePdf } from '../src/core/pdf-reader.js';
 import { buildSchedule } from '../src/core/schedule.js';
 import { HolidayCalendar } from '../src/core/calendar.js';
@@ -16,6 +16,14 @@ it.skipIf(!referencePdfAvailable)('reads the real PDF according to service seman
   const bytes = await readFile(referencePdf);
   const { services } = await parsePdf(bytes);
   assertPdfServices(services);
+  for (const [date, start, name, location] of [
+    ['2026-07-08', '09:00', 'Eucharistiefeier Sekretärinnentag - Zelebrant: Pfarrer Paul und Silke Weihing', 'Kirche St. Georg'],
+    ['2026-07-19', '10:30', 'Wortgottesdienst mit Kommunionfeier (Tausch mit St. Maria wg. GemFest) / Diakon Herrmann', 'Kirche St. Georg'],
+    ['2026-09-19', '13:00', 'Trauung von Lukas und Katja Hiller, mit Taufe von Toni Hiller / Pfr. Stegmaier', 'Kirche St. Coloman'],
+  ]) {
+    expect(services.find((service) => service.date === date && service.start === start && service.name.startsWith(name.split(' ')[0])))
+      .toMatchObject({ name, location });
+  }
   const rules = JSON.parse(await readFile(new URL('../src/data/services.json', import.meta.url)));
   const texts = await Promise.all(['feiertage', 'ferien', 'faschingsferien_bis_2030'].map((name) => readFile(new URL(`../src/data/${name === 'faschingsferien_bis_2030' ? name : `${name}_baden_wuerttemberg`}.ics`, import.meta.url), 'utf8')));
   assertPdfPlan(buildSchedule(services, rules, HolidayCalendar.fromIcsTexts(texts)));
