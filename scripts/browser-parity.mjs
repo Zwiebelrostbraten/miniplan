@@ -31,6 +31,12 @@ const fields = ['date', 'start', 'end', 'name', 'location', 'dayInfo'];
 async function importFile(path, expected) {
   await page.locator('#file-input').setInputFiles(path);
   await page.waitForFunction(() => !document.getElementById('message').textContent.includes('verarbeitet'));
+  const toggle = page.locator('#services-toggle');
+  assert.ok(await page.locator('#services tr:not(.empty)').count() <= 5, 'imports initially show at most five services');
+  if (await toggle.isVisible()) {
+    assert.equal(await toggle.getAttribute('aria-expanded'), 'false', 'imports start collapsed');
+    await toggle.click();
+  }
   const services = await page.locator('#services tr:not(.empty)').evaluateAll((rows, names) => rows.map((row) =>
     Object.fromEntries([...row.querySelectorAll('input')].map((input, index) => [names[index], input.value]))), fields);
   if (expected) assert.deepEqual(services, expected.services);
@@ -106,6 +112,48 @@ try {
   assert.equal(await page.locator('#diagnostics p').count(), 0);
   assert.equal(await page.locator('#message').textContent(), '1 Gottesdienste eingelesen. 0 Importhinweise. Bitte kurz prüfen.');
   console.log('Diagnostics: collapsed by default, keyboard disclosure retains all messages, import resets disclosure, clean import hides control; live status/count: PASS');
+  const serviceRows = page.locator('#services tr:not(.empty)');
+  const servicesToggle = page.locator('#services-toggle');
+  const manyServicesFile = {
+    name: 'many-services.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('Donnerstag, 2. Juli 2026\n' + Array.from({ length: 8 }, (_, i) =>
+      `;18:30;;Gottesdienst ${i + 1};Kirche St. Georg`).join('\n')),
+  };
+  await importFile(manyServicesFile);
+  // The parity reader expands to inspect all imported data; collapse for UI assertions.
+  await servicesToggle.click();
+  assert.equal(await serviceRows.count(), 5);
+  assert.equal(await servicesToggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(await servicesToggle.getAttribute('aria-controls'), 'services');
+  assert.equal(await servicesToggle.textContent(), '3 weitere Gottesdienste anzeigen (8 insgesamt)');
+  await servicesToggle.focus();
+  await page.keyboard.press('Enter');
+  assert.equal(await serviceRows.count(), 8);
+  assert.equal(await servicesToggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(await servicesToggle.textContent(), 'Auf 5 Gottesdienste reduzieren (8 insgesamt)');
+  await page.getByRole('textbox', { name: 'Gottesdienst für Zeile 8', exact: true }).fill('Bearbeitet');
+  await servicesToggle.focus();
+  await page.keyboard.press('Space');
+  assert.equal(await serviceRows.count(), 5);
+  await servicesToggle.click();
+  assert.equal(await page.getByRole('textbox', { name: 'Gottesdienst für Zeile 8', exact: true }).inputValue(), 'Bearbeitet');
+  await page.getByRole('button', { name: 'Zeile 7 löschen', exact: true }).click();
+  assert.equal(await serviceRows.count(), 7);
+  assert.equal(await page.getByRole('textbox', { name: 'Gottesdienst für Zeile 7', exact: true }).inputValue(), 'Bearbeitet');
+  await page.locator('#file-input').setInputFiles(manyServicesFile);
+  await page.waitForFunction(() => !document.getElementById('message').textContent.includes('verarbeitet'));
+  assert.equal(await serviceRows.count(), 5, 'replacement import resets expansion');
+  await servicesToggle.click();
+  await page.locator('#load-demo').click();
+  assert.equal(await serviceRows.count(), 2);
+  assert.equal(await servicesToggle.isVisible(), false);
+  for (let i = 0; i < 4; i++) await page.locator('#add-service').click();
+  assert.equal(await serviceRows.count(), 5, 'demo resets expansion');
+  await servicesToggle.click();
+  await page.getByRole('button', { name: 'Zeile 6 löschen', exact: true }).click();
+  assert.equal(await serviceRows.count(), 5);
+  assert.equal(await servicesToggle.isVisible(), false, 'exactly five services need no control');
+  console.log('Services: five-row preview, accessible keyboard toggle/counts, retained edits, expanded removal, import/demo reset, no control at five or fewer: PASS');
   const pdfServices = await importFile(resolve(reference, '01.07.2026-04.10.2026.pdf'));
   assertPdfServices(pdfServices);
   await writeFile(resolve(output, 'pdf-services.json'), JSON.stringify(pdfServices));

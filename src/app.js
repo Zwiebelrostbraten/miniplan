@@ -11,7 +11,7 @@ import { parseWorkbook } from './core/xlsx-reader.js';
 import { miniplanFilename } from './core/filename.js';
 
 const defaultCalendar = HolidayCalendar.fromIcsTexts([holidays, schoolHolidays, carnivalHolidays]);
-const state = { services: [], diagnostics: [], plan: [] };
+const state = { services: [], servicesExpanded: false, diagnostics: [], plan: [] };
 const $ = (id) => document.getElementById(id);
 const fields = ['date', 'start', 'end', 'name', 'location', 'dayInfo'];
 const labels = { date: 'Datum', start: 'Beginn', end: 'Ende', name: 'Gottesdienst', location: 'Ort', dayInfo: 'Info' };
@@ -41,13 +41,22 @@ function inputFor(service, field, index) {
 
 function renderServices() {
   const body = $('services');
+  const toggle = $('services-toggle');
+  const total = state.services.length;
+  if (total <= 5) state.servicesExpanded = false;
+  toggle.hidden = total <= 5;
+  toggle.setAttribute('aria-expanded', String(state.servicesExpanded));
+  toggle.textContent = state.servicesExpanded
+    ? `Auf 5 Gottesdienste reduzieren (${total} insgesamt)`
+    : `${total - 5} weitere Gottesdienste anzeigen (${total} insgesamt)`;
   body.replaceChildren();
   if (!state.services.length) {
     const row = document.createElement('tr'); row.className = 'empty';
     const cell = document.createElement('td'); cell.colSpan = 7; cell.textContent = 'Noch keine Daten geladen.';
     row.append(cell); body.append(row); return;
   }
-  state.services.forEach((service, index) => {
+  const visibleServices = state.servicesExpanded ? state.services : state.services.slice(0, 5);
+  visibleServices.forEach((service, index) => {
     const row = document.createElement('tr');
     fields.forEach((field) => { const cell = document.createElement('td'); cell.append(inputFor(service, field, index)); row.append(cell); });
     const action = document.createElement('td');
@@ -87,6 +96,8 @@ async function importFile(file) {
 
 async function importFiles(files) {
   if (!files.length) return;
+  state.servicesExpanded = false;
+  renderServices();
   invalidatePlan();
   renderSelectedFiles(files);
   message('Dateien werden lokal verarbeitet …');
@@ -114,6 +125,7 @@ function addService() {
 }
 
 function loadDemo() {
+  state.servicesExpanded = false;
   state.services = [
     { date: '2026-07-01', start: '18:30', end: '19:30', name: 'Eucharistiefeier', location: 'Kirche St. Georg', dayInfo: '', source: 'Beispiel', row: 1 },
     { date: '2026-07-05', start: '10:00', end: '11:00', name: 'Wortgottesdienst', location: 'Kirche St. Georg', dayInfo: '', source: 'Beispiel', row: 2 },
@@ -171,6 +183,10 @@ async function download() {
 }
 
 $('file-input').addEventListener('change', (event) => importFiles(event.target.files));
+$('services-toggle').addEventListener('click', () => {
+  state.servicesExpanded = !state.servicesExpanded;
+  renderServices();
+});
 $('add-service').addEventListener('click', addService);
 $('load-demo').addEventListener('click', loadDemo);
 $('create-plan').addEventListener('click', createPlan);
