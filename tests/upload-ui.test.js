@@ -8,4 +8,11 @@ describe('upload UI', () => {
     const html = await readFile(template, 'utf8');
     expect(html).toContain('id="selected-files"');
   });
+
+  it('offers ODS and CSV imports alongside Excel plus an export format selector', async () => {
+    const html = await readFile(template, 'utf8');
+    expect(html).toContain('.ods');
+    expect(html).toContain('.csv');
+    expect(html).toContain('id="export-format"');
+  });
 });

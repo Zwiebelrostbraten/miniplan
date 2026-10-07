@@ -15,8 +15,8 @@
     </header>
 
     <section class="card" aria-labelledby="import-title">
-      <div class="section-heading"><span class="step">1</span><div><h2 id="import-title">Gottesdienstplan einlesen</h2><p>PDF oder Excel aus dem Pfarrbüro auswählen.</p></div></div>
-      <label class="dropzone" for="file-input"><input id="file-input" type="file" accept=".pdf,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple><strong>Dateien auswählen</strong><span>oder hierher ziehen · PDF und XLSX</span></label>
+      <div class="section-heading"><span class="step">1</span><div><h2 id="import-title">Gottesdienstplan einlesen</h2><p>PDF, Excel, OpenDocument oder CSV aus dem Pfarrbüro auswählen.</p></div></div>
+      <label class="dropzone" for="file-input"><input id="file-input" type="file" accept=".pdf,.xlsx,.ods,.csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.oasis.opendocument.spreadsheet,text/csv" multiple><strong>Dateien auswählen</strong><span>oder hierher ziehen · PDF, XLSX, ODS und CSV</span></label>
       <ul id="selected-files" class="selected-files" aria-live="polite"><li class="file-placeholder">Noch keine Datei ausgewählt.</li></ul>
       <div class="options"><label>Gemeinde <input id="parish" value="St. Georg" autocomplete="organization"></label><button id="load-demo" class="ghost" type="button">Beispieldaten laden</button></div>
     </section>
@@ -29,7 +29,7 @@
 
     <section class="card action-card" aria-labelledby="export-title">
       <div class="section-heading"><span class="step">3</span><div><h2 id="export-title">Miniplan erzeugen</h2><p>Ferien und Feiertage in Baden-Württemberg sind bereits berücksichtigt.</p></div></div>
-      <div class="actions"><button id="create-plan" class="primary" type="button">Miniplan vorbereiten</button><button id="download" class="primary" type="button" disabled>Excel herunterladen</button></div>
+      <div class="actions"><button id="create-plan" class="primary" type="button">Miniplan vorbereiten</button><label>Format <select id="export-format" aria-label="Exportformat"><option value="xlsx">Excel (.xlsx)</option><option value="ods">OpenDocument (.ods)</option><option value="csv">CSV (.csv)</option></select></label><button id="download" class="primary" type="button" disabled>Datei herunterladen</button></div>
       <div id="plan-preview" class="preview" hidden></div>
     </section>
     <p id="message" class="message" role="status" aria-live="polite"></p>

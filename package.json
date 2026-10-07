@@ -10,6 +10,7 @@
     "check": "npm run lint && npm run test"
   },
   "dependencies": {
+    "@e965/xlsx": "^0.20.3",
     "exceljs": "4.4.0",
     "pdfjs-dist": "3.11.174"
   },

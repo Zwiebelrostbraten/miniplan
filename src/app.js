@@ -6,6 +6,7 @@ import { HolidayCalendar } from './core/calendar.js';
 import { parsePdf } from './core/pdf-reader.js';
 import { buildSchedule } from './core/schedule.js';
 import { createMiniplanWorkbook, downloadWorkbook } from './core/xlsx-export.js';
+import { createOpenSpreadsheet, downloadOpenSpreadsheet, parseOpenSpreadsheet } from './core/open-spreadsheet.js';
 import { parseWorkbook } from './core/xlsx-reader.js';
 
 const calendar = HolidayCalendar.fromIcsTexts([holidays, schoolHolidays, carnivalHolidays]);
@@ -64,9 +65,11 @@ function renderSelectedFiles(files) {
 
 async function importFile(file) {
   const input = await file.arrayBuffer();
-  if (file.name.toLocaleLowerCase('de-DE').endsWith('.xlsx')) return parseWorkbook(input, file.name);
-  if (file.name.toLocaleLowerCase('de-DE').endsWith('.pdf')) return parsePdf(input, file.name);
-  throw new Error(`${file.name}: Nur PDF und XLSX werden unterstützt.`);
+  const extension = file.name.toLocaleLowerCase('de-DE').split('.').at(-1);
+  if (extension === 'xlsx') return parseWorkbook(input, file.name);
+  if (extension === 'ods' || extension === 'csv') return parseOpenSpreadsheet(input, file.name);
+  if (extension === 'pdf') return parsePdf(input, file.name);
+  throw new Error(`${file.name}: Unterstützt werden PDF, XLSX, ODS und CSV.`);
 }
 
 async function importFiles(files) {
@@ -112,12 +115,19 @@ function createPlan() {
 async function download() {
   try {
     const parish = $('parish').value.trim() || 'St. Georg';
-    state.bytes ??= await createMiniplanWorkbook(state.plan, parish);
+    const format = $('export-format').value;
     const first = state.plan[0].date.split('-').reverse().join('.');
     const last = state.plan.at(-1).date.split('-').reverse().join('.');
-    downloadWorkbook(state.bytes, `${parish} - Miniplan vom ${first} - ${last}.xlsx`);
-    message('Excel-Datei wurde heruntergeladen.');
-  } catch (error) { message(error.message || 'Die Excel-Datei konnte nicht erstellt werden.', true); }
+    const filename = `${parish} - Miniplan vom ${first} - ${last}.${format}`;
+    if (format === 'xlsx') {
+      state.bytes ??= await createMiniplanWorkbook(state.plan, parish);
+      downloadWorkbook(state.bytes, filename);
+    } else {
+      const bytes = createOpenSpreadsheet(state.plan, parish, format);
+      downloadOpenSpreadsheet(bytes, filename, format);
+    }
+    message(`${format.toUpperCase()}-Datei wurde heruntergeladen.`);
+  } catch (error) { message(error.message || 'Die Datei konnte nicht erstellt werden.', true); }
 }
 
 $('file-input').addEventListener('change', (event) => importFiles(event.target.files));

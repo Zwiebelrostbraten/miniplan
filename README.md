@@ -2,7 +2,7 @@
 
 [![Deploy GitHub Pages](https://github.com/Zwiebelrostbraten/miniplan/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Zwiebelrostbraten/miniplan/actions/workflows/deploy-pages.yml)
 
-Eine datensparsame, browserbasierte Web-App für den St.-Georg-Miniplan. Sie liest Gottesdienstpläne aus PDF- oder Excel-Dateien ein, bietet eine Korrekturtabelle und erzeugt daraus einen formatierten Excel-Miniplan.
+Eine datensparsame, browserbasierte Web-App für den St.-Georg-Miniplan. Sie liest Gottesdienstpläne aus PDF-, Excel-, OpenDocument- oder CSV-Dateien ein, bietet eine Korrekturtabelle und erzeugt daraus einen Miniplan als formatiertes Excel-Dokument oder in offenen Tabellenformaten.
 
 **Live-Version:** https://zwiebelrostbraten.github.io/miniplan/
 
@@ -17,19 +17,26 @@ Eine datensparsame, browserbasierte Web-App für den St.-Georg-Miniplan. Sie lie
 
 ## Funktionen
 
-- Import von `.pdf` und `.xlsx`
+- Import von `.pdf`, `.xlsx`, `.ods` und `.csv`
 - Sofort sichtbare, editierbare Prüftabelle für eingelesene Gottesdienste
 - Manuelles Ergänzen und Entfernen von Einträgen
 - Berücksichtigung von Ferien, Faschingsferien und Feiertagen in Baden-Württemberg
 - Konfigurierbare Gottesdienste sowie Wochendienst am Sonntag
-- Excel-Export im vertrauten Miniplan-Drucklayout
+- Formatiertes `.xlsx` für den bisherigen Excel-Workflow
+- Offener Export als `.ods` (OpenDocument Spreadsheet) oder UTF-8-`.csv` mit Semikolontrennung
 - Lokale Beispieldaten zum gefahrlosen Testen
 
 ## Verwendung
 
 ### Online
 
-Die aktuelle Version unter https://zwiebelrostbraten.github.io/miniplan/ öffnen. Datei auswählen, Daten prüfen, anschließend den Excel-Export herunterladen.
+Die aktuelle Version unter https://zwiebelrostbraten.github.io/miniplan/ öffnen. Datei auswählen, Daten prüfen und vor dem Download im Formatmenü wählen:
+
+- **Excel (`.xlsx`)** behält das bisherige Drucklayout und die Formatierung.
+- **OpenDocument (`.ods`)** ist das offene Tabellenformat für LibreOffice, OnlyOffice und ähnliche Programme.
+- **CSV (`.csv`)** ist eine einfache UTF-8-Datei mit deutscher Semikolontrennung; sie enthält die Plan-Daten, jedoch keine Druckformatierung.
+
+Alle drei Exportwege funktionieren komplett im Browser.
 
 ### Vollständig lokal
 
