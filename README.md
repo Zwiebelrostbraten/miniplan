@@ -72,6 +72,15 @@ Oder alle Prüfungen in einem Schritt:
 npm run check
 ```
 
+Die Repository-/CI-Suite benötigt keine externe Python-Referenz. Der semantische
+Regressionstest in `tests/pdf-real.test.js` wird ausdrücklich als übersprungen
+gemeldet, wenn `MINIPLAN_REFERENCE` nicht gesetzt ist oder die PDF-Testdatei
+`01.07.2026-04.10.2026.pdf` dort fehlt. Mit vorhandener Referenz läuft er automatisch:
+
+```sh
+MINIPLAN_REFERENCE=../miniplan-optimized npm run check
+```
+
 Der Build erstellt die veröffentlichbaren Dateien unter `dist/`. Diese werden nicht eingecheckt; der GitHub-Pages-Workflow baut sie bei jedem Push auf `main` neu.
 
 ## Projektstruktur
@@ -104,6 +113,9 @@ ODS sowie die erweiterten Einstellungen und fehlgeschlagene Ersatzimporte.
 Playwright ist als Entwicklungsabhängigkeit im Lockfile festgelegt. Voraussetzung
 sind das passende Chromium sowie die Python-Referenz mit ihren Abhängigkeiten
 und der PDF-Testdatei unter `../miniplan-optimized`.
+Diese Browser-Paritätsprüfung bleibt die verpflichtende lokale Prüfung mit der
+echten PDF-Datei; eine fehlende Referenz führt hier weiterhin zum Fehler, nicht
+zum Überspringen.
 
 ```sh
 npm ci
