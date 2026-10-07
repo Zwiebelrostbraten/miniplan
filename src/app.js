@@ -58,6 +58,10 @@ function renderServices() {
 }
 
 function renderDiagnostics() {
+  const disclosure = $('diagnostics-disclosure');
+  disclosure.open = false;
+  disclosure.hidden = state.diagnostics.length === 0;
+  $('diagnostics-summary').textContent = `Importhinweise anzeigen / ausblenden (${state.diagnostics.length})`;
   const root = $('diagnostics'); root.replaceChildren();
   state.diagnostics.forEach((item) => { const node = document.createElement('p'); node.className = 'diagnostic'; node.textContent = `${item.source}, Zeile ${item.row}: ${item.message}`; root.append(node); });
 }
@@ -92,7 +96,7 @@ async function importFiles(files) {
     state.diagnostics = results.flatMap((result) => result.diagnostics);
     invalidatePlan();
     renderServices(); renderDiagnostics();
-    message(`${state.services.length} Gottesdienste eingelesen. Bitte kurz prüfen.`);
+    message(`${state.services.length} Gottesdienste eingelesen. ${state.diagnostics.length} Importhinweise. Bitte kurz prüfen.`);
   } catch (error) {
     state.services = [];
     state.diagnostics = [];

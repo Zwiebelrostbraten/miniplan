@@ -74,6 +74,38 @@ async function exportPlan(expected, format = 'xlsx') {
 try {
   await page.goto(pathToFileURL(resolve('dist/miniplan.html')).href);
   assert.equal(await page.locator('#export-format').inputValue(), 'ods');
+  const diagnosticsDisclosure = page.locator('#diagnostics-disclosure');
+  const diagnosticsSummary = page.getByText('Importhinweise anzeigen / ausblenden (2)', { exact: true });
+  assert.equal(await diagnosticsDisclosure.isVisible(), false);
+  const diagnosticFile = {
+    name: 'diagnostics.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('Donnerstag, 2. Juli 2026\n;18:30;;Eucharistiefeier;Kirche St. Georg\n;morgen;;Tauffeier;Kirche St. Georg\n;später;;Tauffeier;Kirche St. Georg'),
+  };
+  await importFile(diagnosticFile);
+  assert.equal(await page.locator('#message').textContent(), '1 Gottesdienste eingelesen. 2 Importhinweise. Bitte kurz prüfen.');
+  assert.equal(await page.locator('#message').getAttribute('role'), 'status');
+  assert.equal(await page.locator('#message').getAttribute('aria-live'), 'polite');
+  assert.equal(await diagnosticsDisclosure.isVisible(), true);
+  assert.equal(await diagnosticsDisclosure.evaluate((node) => node.tagName), 'DETAILS');
+  assert.equal(await diagnosticsSummary.evaluate((node) => node.tagName), 'SUMMARY');
+  assert.equal(await page.locator('#diagnostics p').count(), 2);
+  assert.equal(await page.locator('#diagnostics p').first().isVisible(), false);
+  const retainedDiagnostics = await page.locator('#diagnostics p').allTextContents();
+  assert.ok(retainedDiagnostics.every((text) => text.includes('Ungültige Startzeit ignoriert')));
+  await diagnosticsSummary.focus();
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#diagnostics p').first().isVisible(), true);
+  await page.keyboard.press('Space');
+  assert.equal(await page.locator('#diagnostics p').first().isVisible(), false);
+  assert.deepEqual(await page.locator('#diagnostics p').allTextContents(), retainedDiagnostics);
+  await diagnosticsSummary.click();
+  await importFile(diagnosticFile);
+  assert.equal(await diagnosticsDisclosure.evaluate((node) => node.open), false, 'each import starts collapsed');
+  await importFile({ name: 'clean.csv', mimeType: 'text/csv', buffer: Buffer.from('Donnerstag, 2. Juli 2026\n;18:30;;Eucharistiefeier;Kirche St. Georg') });
+  assert.equal(await diagnosticsDisclosure.isVisible(), false);
+  assert.equal(await page.locator('#diagnostics p').count(), 0);
+  assert.equal(await page.locator('#message').textContent(), '1 Gottesdienste eingelesen. 0 Importhinweise. Bitte kurz prüfen.');
+  console.log('Diagnostics: collapsed by default, keyboard disclosure retains all messages, import resets disclosure, clean import hides control; live status/count: PASS');
   const pdfServices = await importFile(resolve(reference, '01.07.2026-04.10.2026.pdf'));
   assertPdfServices(pdfServices);
   await writeFile(resolve(output, 'pdf-services.json'), JSON.stringify(pdfServices));
@@ -111,7 +143,7 @@ try {
     assert.ok((await page.locator('#diagnostics').textContent()).includes(`Zeile ${diagnostic.row}: ${diagnostic.message}`));
   }
   await exportPlan(oracle.xlsx);
-  await page.locator('details').evaluate((node) => { node.open = true; });
+  await page.locator('.advanced-options').evaluate((node) => { node.open = true; });
   await page.locator('#rules-input').setInputFiles(resolve(output, 'rules.json'));
   assert.equal(await page.locator('#download').isDisabled(), true);
   await page.locator('#calendar-input').setInputFiles(resolve(output, 'custom.ics'));

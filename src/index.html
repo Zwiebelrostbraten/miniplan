@@ -25,7 +25,10 @@
     <section class="card" aria-labelledby="review-title">
       <div class="section-heading"><span class="step">2</span><div><h2 id="review-title">Gelesene Gottesdienste prüfen</h2><p>Fehler können direkt in der Tabelle korrigiert werden.</p></div><button id="add-service" class="ghost compact" type="button">+ Gottesdienst</button></div>
       <div class="table-wrap"><table><thead><tr><th>Datum</th><th>Beginn</th><th>Ende</th><th>Gottesdienst</th><th>Ort</th><th>Info</th><th></th></tr></thead><tbody id="services"><tr class="empty"><td colspan="7">Noch keine Daten geladen.</td></tr></tbody></table></div>
-      <div id="diagnostics" class="diagnostics" aria-live="polite"></div>
+      <details id="diagnostics-disclosure" class="diagnostics" hidden>
+        <summary id="diagnostics-summary">Importhinweise anzeigen / ausblenden</summary>
+        <div id="diagnostics"></div>
+      </details>
     </section>
 
     <section class="card action-card" aria-labelledby="export-title">
