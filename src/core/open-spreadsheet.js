@@ -111,7 +111,7 @@ export async function createOpenSpreadsheet(entries, parish = 'St. Georg', forma
       { s: { c: 0, r: 1 }, e: { c: 6, r: 1 } },
     ];
     sheet['!cols'] = [5, 13, 8, 22, 18, 20, 20].map((wch) => ({ wch }));
-    sheet['!rows'] = [{ hpx: 37.33 }, { hpx: 40 }];
+    sheet['!rows'] = [{ hpx: 37.33 }];
   } else {
     sheet['!cols'] = [{ wch: 13 }, { wch: 10 }, { wch: 32 }, { wch: 45 }];
   }

@@ -61,6 +61,12 @@ describe('parseOpenSpreadsheet', () => {
     const zip = await JSZip.loadAsync(bytes);
     const content = await zip.file('content.xml').async('string');
     const styles = await zip.file('styles.xml').async('string');
+    const rowTags = content.match(/<table:table-row\b[^>]*>/g);
+    const rowStyles = content.match(/<style:style\b[^>]*style:family="table-row"[\s\S]*?<\/style:style>/g);
+    expect(rowStyles).toHaveLength(1);
+    expect(rowStyles[0]).toContain('style:row-height="37.33px"');
+    expect(rowTags[0]).toContain('table:style-name="ro0"');
+    expect(rowTags[1]).not.toContain('table:style-name=');
     expect(content).toContain('style:name="ceTitle"');
     expect(content).toContain('table:style-name="ceTitle"');
     expect(content).toContain('fo:background-color="#D9EAD3"');
