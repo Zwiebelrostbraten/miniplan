@@ -1,6 +1,13 @@
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import { normalizeText, parseGermanDate, parseTime } from './normalize.js';
 
+// pdfjs-dist v4 requires an explicit worker source in the browser (the Node
+// fallback only auto-configures itself). The fake worker (disableWorker) then
+// dynamically imports this module, which build.mjs copies into dist/.
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'miniplan.worker.js';
+}
+
 const Y_TOLERANCE = 2.5;
 const IGNORED_TEXT = ['Terminkalender', 'Ausdruck vom', 'Custos', 'Seite '];
 
