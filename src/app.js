@@ -1,3 +1,4 @@
+import { serviceView } from './core/service-view.js';
 import defaultRules from './data/services.json';
 import holidays from './data/feiertage_baden_wuerttemberg.ics';
 import schoolHolidays from './data/ferien_baden_wuerttemberg.ics';
@@ -36,13 +37,15 @@ function inputFor(service, field, index) {
   input.value = service[field] ?? '';
   input.setAttribute('aria-label', `${labels[field]} für Zeile ${index + 1}`);
   input.addEventListener('input', () => { service[field] = input.value; invalidatePlan(); });
+  if (field === 'location') input.addEventListener('change', renderServices);
   return input;
 }
 
 function renderServices() {
   const body = $('services');
   const toggle = $('services-toggle');
-  const total = state.services.length;
+  const displayed = serviceView(state.services, $('parish').value, $('show-other-services').checked);
+  const total = displayed.length;
   if (total <= 5) state.servicesExpanded = false;
   toggle.hidden = total <= 5;
   toggle.setAttribute('aria-expanded', String(state.servicesExpanded));
@@ -50,13 +53,15 @@ function renderServices() {
     ? `Auf 5 Gottesdienste reduzieren (${total} insgesamt)`
     : `${total - 5} weitere Gottesdienste anzeigen (${total} insgesamt)`;
   body.replaceChildren();
-  if (!state.services.length) {
+  if (!total) {
     const row = document.createElement('tr'); row.className = 'empty';
-    const cell = document.createElement('td'); cell.colSpan = 7; cell.textContent = 'Noch keine Daten geladen.';
+    const cell = document.createElement('td'); cell.colSpan = 7; cell.textContent = !state.services.length ? 'Noch keine Gottesdienste geladen.'
+      : !$('parish').value.trim() ? 'Bitte eine Gemeinde in Schritt 1 eingeben oder Gottesdienste anderer Gemeinden und Orte anzeigen.'
+        : 'Keine Gottesdienste passen zu dieser Gemeinde. Gemeinde und Ortsangaben prüfen oder Gottesdienste anderer Gemeinden und Orte anzeigen.';
     row.append(cell); body.append(row); return;
   }
-  const visibleServices = state.servicesExpanded ? state.services : state.services.slice(0, 5);
-  visibleServices.forEach((service, index) => {
+  const visibleServices = state.servicesExpanded ? displayed : displayed.slice(0, 5);
+  visibleServices.forEach(({ service, index }) => {
     const row = document.createElement('tr');
     fields.forEach((field) => { const cell = document.createElement('td'); cell.append(inputFor(service, field, index)); row.append(cell); });
     const action = document.createElement('td');
@@ -191,10 +196,19 @@ $('add-service').addEventListener('click', addService);
 $('load-demo').addEventListener('click', loadDemo);
 $('create-plan').addEventListener('click', createPlan);
 $('download').addEventListener('click', download);
-$('parish').addEventListener('input', invalidatePlan);
-for (const id of ['rules-input', 'calendar-input']) $(id).addEventListener('change', invalidatePlan);
+$('parish').addEventListener('input', () => { invalidatePlan(); renderServices(); });
+$('show-other-services').addEventListener('change', () => { state.servicesExpanded = false; renderServices(); });
+function renderCalendarHelp() {
+  $('calendar-help').textContent = $('no-calendar').checked
+    ? 'Der Miniplan wird ohne Ferien- und Feiertagsprüfung erstellt.'
+    : $('calendar-input').files.length
+      ? 'Ferien und Feiertage aus deinen ausgewählten Kalendern werden berücksichtigt.'
+      : 'Ferien und Feiertage in Baden-Württemberg werden berücksichtigt.';
+}
+for (const id of ['rules-input', 'calendar-input']) $(id).addEventListener('change', () => { invalidatePlan(); renderCalendarHelp(); });
 $('no-calendar').addEventListener('change', () => {
   $('calendar-input').disabled = $('no-calendar').checked;
+  renderCalendarHelp();
   invalidatePlan();
 });
 for (const eventName of ['dragenter', 'dragover']) $('file-input').closest('.dropzone').addEventListener(eventName, (event) => { event.preventDefault(); event.currentTarget.classList.add('dragging'); });

@@ -31,6 +31,8 @@ const fields = ['date', 'start', 'end', 'name', 'location', 'dayInfo'];
 async function importFile(path, expected) {
   await page.locator('#file-input').setInputFiles(path);
   await page.waitForFunction(() => !document.getElementById('message').textContent.includes('verarbeitet'));
+  // Inspect every imported row for reference parity, independent of the display filter.
+  await page.locator('#show-other-services').check();
   const toggle = page.locator('#services-toggle');
   assert.ok(await page.locator('#services tr:not(.empty)').count() <= 5, 'imports initially show at most five services');
   if (await toggle.isVisible()) {
@@ -80,6 +82,7 @@ async function exportPlan(expected, format = 'xlsx') {
 try {
   await page.goto(pathToFileURL(resolve('dist/miniplan.html')).href);
   assert.equal(await page.locator('#export-format').inputValue(), 'ods');
+  assert.equal(await page.locator('#show-other-services').isChecked(), false);
   const diagnosticsDisclosure = page.locator('#diagnostics-disclosure');
   const diagnosticsSummary = page.getByText('Importhinweise anzeigen / ausblenden (2)', { exact: true });
   assert.equal(await diagnosticsDisclosure.isVisible(), false);
@@ -154,6 +157,89 @@ try {
   assert.equal(await serviceRows.count(), 5);
   assert.equal(await servicesToggle.isVisible(), false, 'exactly five services need no control');
   console.log('Services: five-row preview, accessible keyboard toggle/counts, retained edits, expanded removal, import/demo reset, no control at five or fewer: PASS');
+  await page.locator('#show-other-services').uncheck();
+  const mixedFile = {
+    name: 'mixed.csv', mimeType: 'text/csv',
+    buffer: Buffer.from('Donnerstag, 2. Juli 2026\n' + [
+      ';18:30;;Tauffeier;Andere Kirche',
+      ...Array.from({ length: 7 }, (_, i) => `;18:30;;Tauffeier ${i};Kirche STRASSE`),
+      ';18:30;;Tauffeier;extern', ';18:30;;Tauffeier;Dorffest',
+    ].join('\n')),
+  };
+  await page.locator('#parish').fill(' Straße ');
+  await page.locator('#file-input').setInputFiles(mixedFile);
+  await page.waitForFunction(() => !document.getElementById('message').textContent.includes('verarbeitet'));
+  assert.equal(await serviceRows.count(), 5);
+  assert.equal(await servicesToggle.textContent(), '2 weitere Gottesdienste anzeigen (7 insgesamt)');
+  assert.equal(await page.getByRole('textbox', { name: 'Ort für Zeile 2', exact: true }).inputValue(), 'Kirche STRASSE');
+  for (const width of [1280, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    const layout = await page.locator('.table-wrap').evaluate((wrap) => {
+      const button = wrap.querySelector('#services-toggle');
+      const scroll = wrap.querySelector('.table-scroll');
+      const rect = wrap.getBoundingClientRect();
+      const footer = button.getBoundingClientRect();
+      return { width: rect.width, footerWidth: footer.width, left: footer.left - rect.left,
+        bottom: rect.bottom - footer.bottom, radius: getComputedStyle(wrap).borderRadius,
+        overflow: getComputedStyle(scroll).overflowX,
+        scrolls: scroll.scrollWidth > scroll.clientWidth,
+        pageOverflow: document.documentElement.scrollWidth > innerWidth };
+    });
+    assert.ok(Math.abs(layout.width - layout.footerWidth - 2) < 1);
+    assert.equal(layout.left, 1);
+    assert.equal(layout.bottom, 1);
+    assert.equal(layout.radius, '10px');
+    assert.equal(layout.overflow, 'auto');
+    assert.equal(layout.pageOverflow, false);
+    if (width === 375) assert.equal(layout.scrolls, true);
+    await servicesToggle.focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await serviceRows.count(), 7);
+    await page.keyboard.press('Space');
+    assert.equal(await serviceRows.count(), 5);
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.getByRole('textbox', { name: 'Gottesdienst für Zeile 2', exact: true }).fill('Tauffeier bearbeitet');
+  await page.getByRole('button', { name: 'Zeile 3 löschen', exact: true }).click();
+  assert.equal(await servicesToggle.textContent(), '1 weitere Gottesdienste anzeigen (6 insgesamt)');
+  await page.locator('#show-other-services').check();
+  assert.equal(await servicesToggle.textContent(), '4 weitere Gottesdienste anzeigen (9 insgesamt)');
+  assert.equal(await page.getByRole('textbox', { name: 'Gottesdienst für Zeile 1', exact: true }).inputValue(), 'Tauffeier');
+  assert.equal(await page.getByRole('textbox', { name: 'Gottesdienst für Zeile 2', exact: true }).inputValue(), 'Tauffeier bearbeitet');
+  await page.locator('#create-plan').click();
+  await page.waitForFunction(() => !document.getElementById('download').disabled);
+  const allViewPlan = await page.locator('#plan-preview').textContent();
+  await page.locator('#show-other-services').uncheck();
+  assert.equal(await page.locator('#download').isDisabled(), false, 'display-only toggle preserves plan');
+  await page.locator('#create-plan').click();
+  assert.equal(await page.locator('#plan-preview').textContent(), allViewPlan, 'display filtering leaves scheduling unchanged');
+  await page.getByRole('textbox', { name: 'Ort für Zeile 2', exact: true }).fill('Andere Kirche');
+  await page.locator('#parish').focus();
+  assert.equal(await servicesToggle.isVisible(), false, 'location edit drops the displayed count to five');
+  assert.equal(await serviceRows.count(), 5);
+  await page.locator('#add-service').click();
+  assert.equal(await servicesToggle.textContent(), '1 weitere Gottesdienste anzeigen (6 insgesamt)');
+  await servicesToggle.click();
+  assert.equal(await page.getByRole('textbox', { name: 'Ort für Zeile 10', exact: true }).inputValue(), ' Straße ');
+  await page.locator('#parish').fill('Unbekannt');
+  assert.equal(await serviceRows.count(), 0);
+  assert.ok((await page.locator('#services .empty').textContent()).includes('Keine Gottesdienste passen'));
+  await page.locator('#parish').fill(' ');
+  assert.ok((await page.locator('#services .empty').textContent()).includes('Bitte eine Gemeinde'));
+  await page.locator('#show-other-services').check();
+  await servicesToggle.click();
+  assert.equal(await serviceRows.count(), 10, 'hidden imported and manual rows remain in state');
+  await page.locator('#file-input').setInputFiles(mixedFile);
+  await page.waitForFunction(() => !document.getElementById('message').textContent.includes('verarbeitet'));
+  assert.equal(await serviceRows.count(), 5);
+  assert.equal(await servicesToggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(await servicesToggle.textContent(), '5 weitere Gottesdienste anzeigen (10 insgesamt)');
+  await page.locator('#show-other-services').uncheck();
+  assert.equal(await serviceRows.count(), 0);
+  await page.locator('#parish').fill('St. Georg');
+  await page.locator('.advanced-options').evaluate((node) => { node.open = true; });
+  assert.ok(!/Python|Python-Programm|Server|Browser/.test(await page.locator('body').innerText()));
+  console.log('Location filter: German folding, source-safe edits/removals, display-only planning, live parish/empty states, manual addition, import reset; connected footer at 1280px/375px with keyboard: PASS');
   const pdfServices = await importFile(resolve(reference, '01.07.2026-04.10.2026.pdf'));
   assertPdfServices(pdfServices);
   await writeFile(resolve(output, 'pdf-services.json'), JSON.stringify(pdfServices));
@@ -195,17 +281,27 @@ try {
   await page.locator('#rules-input').setInputFiles(resolve(output, 'rules.json'));
   assert.equal(await page.locator('#download').isDisabled(), true);
   await page.locator('#calendar-input').setInputFiles(resolve(output, 'custom.ics'));
+  assert.equal(await page.locator('#calendar-help').textContent(), 'Ferien und Feiertage aus deinen ausgewählten Kalendern werden berücksichtigt.');
   await exportPlan(oracle.custom);
   await page.locator('#no-calendar').check();
   assert.equal(await page.locator('#calendar-input').isDisabled(), true);
   assert.equal(await page.locator('#download').isDisabled(), true);
+  assert.equal(await page.locator('#calendar-help').textContent(), 'Der Miniplan wird ohne Ferien- und Feiertagsprüfung erstellt.');
   await exportPlan(oracle.none);
   await page.locator('#no-calendar').uncheck();
+  assert.equal(await page.locator('#calendar-input').isDisabled(), false);
+  assert.equal(await page.locator('#calendar-help').textContent(), 'Ferien und Feiertage aus deinen ausgewählten Kalendern werden berücksichtigt.');
+  await exportPlan(oracle.custom);
   await page.locator('#calendar-input').setInputFiles({ name: 'bad.ics', mimeType: 'text/calendar', buffer: Buffer.from('not a calendar') });
   await page.locator('#create-plan').click();
   await page.waitForFunction(() => document.getElementById('message').textContent.includes('Ungültiger ICS'));
   assert.equal(await page.locator('#download').isDisabled(), true);
   await page.locator('#calendar-input').setInputFiles([]);
+  assert.equal(await page.locator('#calendar-help').textContent(), 'Ferien und Feiertage in Baden-Württemberg werden berücksichtigt.');
+  await page.locator('#no-calendar').check();
+  assert.equal(await page.locator('#calendar-help').textContent(), 'Der Miniplan wird ohne Ferien- und Feiertagsprüfung erstellt.');
+  await page.locator('#no-calendar').uncheck();
+  assert.equal(await page.locator('#calendar-help').textContent(), 'Ferien und Feiertage in Baden-Württemberg werden berücksichtigt.');
   await page.locator('#rules-input').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{}') });
   await page.locator('#create-plan').click();
   await page.waitForFunction(() => document.getElementById('message').textContent.includes('Fehlende Regelbereiche'));

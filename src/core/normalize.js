@@ -65,3 +65,7 @@ export function compareText(a, b) {
   }
   return left.length - right.length;
 }
+
+export function fold(value) {
+  return String(value).toLocaleLowerCase('de-DE').replaceAll('ß', 'ss');
+}

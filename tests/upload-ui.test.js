@@ -9,7 +9,7 @@ describe('upload UI', () => {
     expect(html).toContain('id="selected-files"');
   });
 
-  it('exposes the Python pipeline overrides for custom rules and calendars', async () => {
+  it('offers custom planning rules and calendars', async () => {
     const html = await readFile(template, 'utf8');
     expect(html).toContain('id="rules-input"');
     expect(html).toContain('id="calendar-input"');
@@ -21,4 +21,16 @@ describe('upload UI', () => {
     expect(html).toContain('class="format-field"');
     expect(html).toMatch(/<option value="ods" selected>/);
   });
+});
+
+it('uses clear copy, an unchecked location filter and a connected accessible footer', async () => {
+  const html = await readFile(template, 'utf8');
+  const css = await readFile(new URL('../src/style.css', import.meta.url), 'utf8');
+  expect(html).not.toMatch(/Python|Server|Browser/);
+  expect(html).toMatch(/id="show-other-services" type="checkbox"(?! checked)/);
+  expect(html).toContain('id="calendar-help"');
+  expect(html).toMatch(/class="table-wrap"[\s\S]*class="table-scroll"[\s\S]*<\/table><\/div>\s*<button id="services-toggle"/);
+  expect(css).toMatch(/\.services-toggle\{[^}]*width:100%/);
+  expect(css).toContain('.table-scroll{overflow:auto}');
+  expect(css).toContain('.services-toggle:focus-visible');
 });

@@ -9,9 +9,9 @@
 <body>
   <main class="shell">
     <header class="hero">
-      <p class="eyebrow">St. Georg · lokal im Browser</p>
+      <p class="eyebrow">Für deine Gemeinde</p>
       <h1>Miniplan erstellen</h1>
-      <p>Plan hochladen, kurz prüfen, als offene Tabelle oder Excel herunterladen. Deine Dateien verlassen dieses Gerät nicht.</p>
+      <p>Plan hochladen, kurz prüfen, als Tabelle herunterladen. Deine Dateien verlassen dieses Gerät nicht.</p>
     </header>
 
     <section class="card" aria-labelledby="import-title">
@@ -19,13 +19,14 @@
       <label class="dropzone" for="file-input"><input id="file-input" type="file" accept=".pdf,.xlsx,.ods,.csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.oasis.opendocument.spreadsheet,text/csv" multiple><strong>Dateien auswählen</strong><span>oder hierher ziehen · PDF, XLSX, ODS und CSV</span></label>
       <ul id="selected-files" class="selected-files" aria-live="polite"><li class="file-placeholder">Noch keine Datei ausgewählt.</li></ul>
       <div class="options"><label>Gemeinde <input id="parish" value="St. Georg" autocomplete="organization"></label><button id="load-demo" class="ghost" type="button">Beispieldaten laden</button></div>
-      <details class="advanced-options"><summary>Erweiterte Einstellungen</summary><p>Optional dieselben Regel- und Kalender-Überschreibungen wie im Python-Programm verwenden. Dateien bleiben lokal.</p><div class="options"><label>Eigene Regeln <input id="rules-input" type="file" accept=".json,application/json"></label><label>Eigene Kalender <input id="calendar-input" type="file" accept=".ics,text/calendar" multiple></label><label class="check"><input id="no-calendar" type="checkbox"> Ferien- und Feiertagsprüfung deaktivieren</label></div></details>
+      <details class="advanced-options"><summary>Erweiterte Einstellungen</summary><p>Passe die Dienste mit eigenen Planungsregeln an. Eigene Ferien- und Feiertagskalender ersetzen die voreingestellten Kalender für Baden-Württemberg.</p><div class="options"><label>Eigene Planungsregeln laden <input id="rules-input" type="file" accept=".json,application/json"></label><label>Eigene Ferien- und Feiertagskalender laden <input id="calendar-input" type="file" accept=".ics,text/calendar" multiple></label><label class="check"><input id="no-calendar" type="checkbox"> Ferien- und Feiertagsprüfung deaktivieren</label></div></details>
     </section>
 
     <section class="card" aria-labelledby="review-title">
-      <div class="section-heading"><span class="step">2</span><div><h2 id="review-title">Gelesene Gottesdienste prüfen</h2><p>Fehler können direkt in der Tabelle korrigiert werden.</p></div><button id="add-service" class="ghost compact" type="button">+ Gottesdienst</button></div>
-      <div class="table-wrap"><table><thead><tr><th>Datum</th><th>Beginn</th><th>Ende</th><th>Gottesdienst</th><th>Ort</th><th>Info</th><th></th></tr></thead><tbody id="services"><tr class="empty"><td colspan="7">Noch keine Daten geladen.</td></tr></tbody></table></div>
-      <button id="services-toggle" class="ghost" type="button" aria-expanded="false" aria-controls="services" hidden></button>
+      <div class="section-heading"><span class="step">2</span><div><h2 id="review-title">Gottesdienste prüfen</h2><p>Prüfe und korrigiere die Gottesdienste deiner Gemeinde direkt in der Tabelle.</p></div><button id="add-service" class="ghost compact" type="button">+ Gottesdienst hinzufügen</button></div>
+      <label class="check service-filter"><input id="show-other-services" type="checkbox"> Gottesdienste anderer Gemeinden und Orte anzeigen</label>
+      <div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>Datum</th><th>Beginn</th><th>Ende</th><th>Gottesdienst</th><th>Ort</th><th>Info</th><th></th></tr></thead><tbody id="services"><tr class="empty"><td colspan="7">Noch keine Gottesdienste geladen.</td></tr></tbody></table></div>
+      <button id="services-toggle" class="services-toggle" type="button" aria-expanded="false" aria-controls="services" hidden></button></div>
       <details id="diagnostics-disclosure" class="diagnostics" hidden>
         <summary id="diagnostics-summary">Importhinweise anzeigen / ausblenden</summary>
         <div id="diagnostics"></div>
@@ -33,7 +34,7 @@
     </section>
 
     <section class="card action-card" aria-labelledby="export-title">
-      <div class="section-heading"><span class="step">3</span><div><h2 id="export-title">Miniplan erzeugen</h2><p>Ferien und Feiertage in Baden-Württemberg sind bereits berücksichtigt.</p></div></div>
+      <div class="section-heading"><span class="step">3</span><div><h2 id="export-title">Miniplan erzeugen</h2><p id="calendar-help" aria-live="polite">Ferien und Feiertage in Baden-Württemberg werden berücksichtigt.</p></div></div>
       <div class="actions">
         <button id="create-plan" class="primary" type="button">Miniplan vorbereiten</button>
         <label class="format-field"><span>Ausgabeformat</span><select id="export-format" aria-label="Exportformat"><option value="ods" selected>OpenDocument (.ods)</option><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV (.csv)</option></select></label>
@@ -43,7 +44,7 @@
     </section>
     <p id="message" class="message" role="status" aria-live="polite"></p>
   </main>
-  <footer>Funktioniert ohne Konto, Server oder Internetverbindung.</footer>
+  <footer>Ohne Konto und auch ohne Internet nutzbar.</footer>
   <script>/* INLINE_JS */</script>
 </body>
 </html>

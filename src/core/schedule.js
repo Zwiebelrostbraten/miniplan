@@ -1,8 +1,4 @@
-import { addDays, weekdayIndex, compareText } from './normalize.js';
-
-function fold(value) {
-  return String(value).toLocaleLowerCase('de-DE').replaceAll('ß', 'ss');
-}
+import { addDays, weekdayIndex, compareText, fold } from './normalize.js';
 
 function matchesLocation(rule, location) {
   return !rule.Ort || fold(location).includes(fold(rule.Ort));
