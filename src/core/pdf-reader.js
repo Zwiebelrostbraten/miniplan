@@ -19,7 +19,8 @@ function looksLikeDate(value) {
 }
 
 function columnFor(x, width) {
-  const boundaries = [width * 0.135, width * 0.21, width * 0.29, width * 0.67];
+  // The real calendar starts service names at x=166.4 (about 0.28 of the page).
+  const boundaries = [width * 0.135, width * 0.21, width * 0.27, width * 0.67];
   return boundaries.filter((boundary) => x >= boundary).length;
 }
 
@@ -71,9 +72,12 @@ export function parseRows(rows, source) {
   const diagnostics = [];
   let date = null;
   let dayInfo = [];
+  let continuation = null;
   rows.forEach(([first = '', startValue = '', endValue = '', nameValue = '', locationValue = ''], index) => {
     const row = index + 1;
     const firstText = normalizeText(first);
+    // Notes end the wrapped service; page breaks alone do not.
+    if (firstText || normalizeText(startValue) || /\b(?:L1:|L2:|Ev:|Kollekte:|Zusatzinfo:)/i.test(`${nameValue} ${locationValue}`)) continuation = null;
     if (firstText) {
       try {
         date = parseGermanDate(firstText);
@@ -94,7 +98,7 @@ export function parseRows(rows, source) {
     const location = normalizeText(locationValue);
     const startText = normalizeText(startValue);
     if (!firstText && !startText && (name || location)) {
-      const previous = services.at(-1);
+      const previous = continuation;
       if (previous && date && previous.date === date) {
         previous.name = normalizeText(`${previous.name} ${name}`);
         previous.location = normalizeText(`${previous.location} ${location}`);
@@ -120,7 +124,8 @@ export function parseRows(rows, source) {
     if (normalizeText(endValue)) {
       try { end = parseTime(endValue); } catch { diagnostics.push({ level: 'warning', message: 'Ungültige Endzeit ignoriert', source, row }); }
     }
-    services.push({ date, start, end, name, location, dayInfo: dayInfo.join('; '), source, row });
+    continuation = { date, start, end, name, location, dayInfo: dayInfo.join('; '), source, row };
+    services.push(continuation);
   });
   return { services, diagnostics };
 }

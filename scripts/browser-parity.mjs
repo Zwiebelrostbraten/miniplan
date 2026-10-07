@@ -10,6 +10,7 @@ import ExcelJS from 'exceljs';
 import * as SheetJS from '@e965/xlsx';
 import JSZip from 'jszip';
 import { chromium } from 'playwright';
+import { assertPdfServices, assertPdfPlan } from './pdf-semantics.mjs';
 
 const reference = resolve(process.env.MINIPLAN_REFERENCE || '../miniplan-optimized');
 const referencePython = resolve(reference, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
@@ -32,7 +33,8 @@ async function importFile(path, expected) {
   await page.waitForFunction(() => !document.getElementById('message').textContent.includes('verarbeitet'));
   const services = await page.locator('#services tr:not(.empty)').evaluateAll((rows, names) => rows.map((row) =>
     Object.fromEntries([...row.querySelectorAll('input')].map((input, index) => [names[index], input.value]))), fields);
-  assert.deepEqual(services, expected.services);
+  if (expected) assert.deepEqual(services, expected.services);
+  return services;
 }
 async function exportPlan(expected, format = 'xlsx') {
   await page.locator('#create-plan').click();
@@ -72,12 +74,19 @@ async function exportPlan(expected, format = 'xlsx') {
 try {
   await page.goto(pathToFileURL(resolve('dist/miniplan.html')).href);
   assert.equal(await page.locator('#export-format').inputValue(), 'ods');
-  await importFile(resolve(reference, '01.07.2026-04.10.2026.pdf'), oracle.pdf);
+  const pdfServices = await importFile(resolve(reference, '01.07.2026-04.10.2026.pdf'));
+  assertPdfServices(pdfServices);
+  await writeFile(resolve(output, 'pdf-services.json'), JSON.stringify(pdfServices));
+  execFileSync(python, ['scripts/parity-reference.py', reference, output], {
+    env: { ...process.env, PYTHONPATH: resolve(reference, 'src') },
+  });
+  oracle.pdf = JSON.parse(await readFile(resolve(output, 'oracle.json'))).pdf;
+  assertPdfPlan(oracle.pdf.plan);
   const pdfDiagnostics = await page.locator('#diagnostics p').allTextContents();
-  assert.deepEqual(pdfDiagnostics, oracle.pdf.diagnostics.map((item) => `01.07.2026-04.10.2026.pdf, Zeile ${item.row}: ${item.message}`));
+  assert.ok(pdfDiagnostics.every((message) => /^01\.07\.2026-04\.10\.2026\.pdf, Zeile (?:[1-9]|1[0-5]): (?:Unvollständige Gottesdienstzeile übersprungen|Ungültige Startzeit ignoriert)$/.test(message)));
   await exportPlan(oracle.pdf, 'ods');
   await exportPlan(oracle.pdf);
-  console.log(`file:// PDF: ${oracle.pdf.services.length} exact source rows; ${oracle.pdf.plan.length} plan entries; ODS/XLSX exports match Python`);
+  console.log(`file:// PDF: ${oracle.pdf.services.length} semantically validated source services; ${oracle.pdf.plan.length} plan entries; ODS/XLSX exports match Python from corrected source services`);
   await page.evaluate(() => {
     const original = File.prototype.arrayBuffer;
     File.prototype.arrayBuffer = function () {

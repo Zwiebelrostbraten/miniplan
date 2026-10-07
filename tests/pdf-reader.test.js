@@ -5,10 +5,10 @@ const item = (str, x, y, width = str.length * 5) => ({ str, width, transform: [1
 const PAGE_WIDTH = 595.247;
 
 describe('rowsFromTextItems', () => {
-  it('uses actual glyph widths for words crossing a column boundary', () => {
+  it('keeps a wrapped celebrant name together using glyph widths', () => {
     const run = item('/ Pfr. Stegmaier', 166.4, 640, 69.37);
     run.characterWidths = [2.77, 2.77, 6.66, 2.77, 3.33, 2.77, 2.77, 6.66, 2.77, 5.56, 5.56, 8.33, 5.56, 2.22, 5.56, 3.33];
-    expect(rowsFromTextItems([run], PAGE_WIDTH)).toEqual([['', '', '/ Pfr.', 'Stegmaier', '']]);
+    expect(rowsFromTextItems([run], PAGE_WIDTH)).toEqual([['', '', '', '/ Pfr. Stegmaier', '']]);
   });
 
   it('groups PDF text by row and maps five relative columns', () => {
@@ -22,18 +22,18 @@ describe('rowsFromTextItems', () => {
     ]);
   });
 
-  it('matches the optimized Python boundary behavior for the real Pfarrbüro PDF', () => {
+  it('keeps the leading service word in the name column for the real Pfarrbüro PDF', () => {
     const rows = rowsFromTextItems([
       item('07:45', 90.95, 640), item('08:15', 126.15, 640), item('Schülergottesdienst', 166.4, 640), item('Kirche St. Georg', 442.95, 640),
     ], PAGE_WIDTH);
-    expect(rows).toEqual([['', '07:45', '08:15 Schülergottesdienst', '', 'Kirche St. Georg']]);
+    expect(rows).toEqual([['', '07:45', '08:15', 'Schülergottesdienst', 'Kirche St. Georg']]);
   });
 
-  it('splits PDF.js text runs into words before assigning Python-compatible columns', () => {
+  it('splits PDF.js text runs into words before assigning service columns', () => {
     const rows = rowsFromTextItems([
       item('18:30', 90.95, 640), item('19:30', 126.15, 640), item('Eucharistiefeier - Erntedank', 166.4, 640, 130), item('Kirche St. Georg', 442.95, 640, 80),
     ], PAGE_WIDTH);
-    expect(rows).toEqual([['', '18:30', '19:30 Eucharistiefeier', '- Erntedank', 'Kirche St. Georg']]);
+    expect(rows).toEqual([['', '18:30', '19:30', 'Eucharistiefeier - Erntedank', 'Kirche St. Georg']]);
   });
 
   it('drops PDF boilerplate lines before parsing rows', () => {
@@ -58,4 +58,16 @@ describe('parseRows', () => {
     }]);
     expect(result.diagnostics).toEqual([]);
   });
+});
+
+it('ends continuation at day notes and readings', () => {
+    const result = parseRows([
+      ['Sonntag, 5. Juli 2026'],
+      ['', '10:30', '11:30', 'Wortgottesdienst', 'Kirche St. Georg'],
+      ['14. Sonntag', 'im', 'Jahreskreis', 'L1: Sach 9', 'Ev: Mt 11'],
+      ['', '', '', '25-30', ''],
+      ['', '', '', 'L2: Röm 8', ''],
+    ], 'plan.pdf');
+    expect(result.services[0].name).toBe('Wortgottesdienst');
+    expect(result.services[0].location).toBe('Kirche St. Georg');
 });

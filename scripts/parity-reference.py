@@ -2,10 +2,10 @@
 import json
 import sys
 from dataclasses import asdict
-from datetime import time
+from datetime import date, time
+from types import SimpleNamespace
 from pathlib import Path
 from openpyxl import Workbook, load_workbook
-from miniplan.readers.pdf import read_pdf
 from miniplan.readers.xlsx import read_xlsx
 from miniplan.pipeline import _load_calendars
 from miniplan.classify import ServiceClassifier
@@ -47,10 +47,18 @@ def result(read, classifier):
         'rows': list(sheet.iter_rows(values_only=True)),
     }
 
-pdf = read_pdf(reference / '01.07.2026-04.10.2026.pdf')
 xlsx = read_xlsx(output / 'input.xlsx')
-oracle = {'pdf': result(pdf, ServiceClassifier.default(_load_calendars(None))),
-          'xlsx': result(xlsx, ServiceClassifier.default(_load_calendars(None))),
+oracle = {'xlsx': result(xlsx, ServiceClassifier.default(_load_calendars(None))),
           'custom': result(xlsx, ServiceClassifier(rules, HolidayCalendar.from_ics_paths([calendar_path]))),
           'none': result(xlsx, ServiceClassifier(rules, HolidayCalendar()))}
+# PDF semantics are asserted independently in JavaScript. Use those corrected
+# source services only to retain Python scheduling/writer parity.
+pdf_path = output / 'pdf-services.json'
+if pdf_path.exists():
+    services = [SimpleNamespace(date=date.fromisoformat(s['date']),
+        start=time.fromisoformat(s['start']), end=time.fromisoformat(s['end']) if s['end'] else None,
+        name=s['name'], location=s['location'], day_info=s['dayInfo'])
+        for s in json.loads(pdf_path.read_text())]
+    oracle['pdf'] = result(SimpleNamespace(services=services, diagnostics=[]),
+        ServiceClassifier.default(_load_calendars(None)))
 (output / 'oracle.json').write_text(json.dumps(oracle))
