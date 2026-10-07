@@ -9,10 +9,9 @@ describe('upload UI', () => {
     expect(html).toContain('id="selected-files"');
   });
 
-  it('offers ODS and CSV imports alongside Excel plus an export format selector', async () => {
+  it('uses OpenDocument as the default export in a styled format control', async () => {
     const html = await readFile(template, 'utf8');
-    expect(html).toContain('.ods');
-    expect(html).toContain('.csv');
-    expect(html).toContain('id="export-format"');
+    expect(html).toContain('class="format-field"');
+    expect(html).toMatch(/<option value="ods" selected>/);
   });
 });

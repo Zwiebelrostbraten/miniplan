@@ -11,7 +11,7 @@
     <header class="hero">
       <p class="eyebrow">St. Georg · lokal im Browser</p>
       <h1>Miniplan erstellen</h1>
-      <p>Plan hochladen, kurz prüfen, Excel herunterladen. Deine Dateien verlassen dieses Gerät nicht.</p>
+      <p>Plan hochladen, kurz prüfen, als offene Tabelle oder Excel herunterladen. Deine Dateien verlassen dieses Gerät nicht.</p>
     </header>
 
     <section class="card" aria-labelledby="import-title">
@@ -29,7 +29,11 @@
 
     <section class="card action-card" aria-labelledby="export-title">
       <div class="section-heading"><span class="step">3</span><div><h2 id="export-title">Miniplan erzeugen</h2><p>Ferien und Feiertage in Baden-Württemberg sind bereits berücksichtigt.</p></div></div>
-      <div class="actions"><button id="create-plan" class="primary" type="button">Miniplan vorbereiten</button><label>Format <select id="export-format" aria-label="Exportformat"><option value="xlsx">Excel (.xlsx)</option><option value="ods">OpenDocument (.ods)</option><option value="csv">CSV (.csv)</option></select></label><button id="download" class="primary" type="button" disabled>Datei herunterladen</button></div>
+      <div class="actions">
+        <button id="create-plan" class="primary" type="button">Miniplan vorbereiten</button>
+        <label class="format-field"><span>Ausgabeformat</span><select id="export-format" aria-label="Exportformat"><option value="ods" selected>OpenDocument (.ods)</option><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV (.csv)</option></select></label>
+        <button id="download" class="primary" type="button" disabled>Datei herunterladen</button>
+      </div>
       <div id="plan-preview" class="preview" hidden></div>
     </section>
     <p id="message" class="message" role="status" aria-live="polite"></p>

@@ -32,8 +32,8 @@ Eine datensparsame, browserbasierte Web-App für den St.-Georg-Miniplan. Sie lie
 
 Die aktuelle Version unter https://zwiebelrostbraten.github.io/miniplan/ öffnen. Datei auswählen, Daten prüfen und vor dem Download im Formatmenü wählen:
 
-- **Excel (`.xlsx`)** behält das bisherige Drucklayout und die Formatierung.
-- **OpenDocument (`.ods`)** ist das offene Tabellenformat für LibreOffice, OnlyOffice und ähnliche Programme.
+- **OpenDocument (`.ods`)** ist der Standardexport und das offene Tabellenformat für LibreOffice, OnlyOffice und ähnliche Programme.
+- **Excel (`.xlsx`)** bleibt wählbar und behält das bisherige Drucklayout und die Formatierung.
 - **CSV (`.csv`)** ist eine einfache UTF-8-Datei mit deutscher Semikolontrennung; sie enthält die Plan-Daten, jedoch keine Druckformatierung.
 
 Alle drei Exportwege funktionieren komplett im Browser.
