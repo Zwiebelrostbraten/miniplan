@@ -29,20 +29,10 @@
 
     <section class="card action-card" aria-labelledby="export-title">
       <div class="section-heading"><span class="step">3</span><div><h2 id="export-title">Miniplan erzeugen</h2><p>Ferien und Feiertage in Baden-Württemberg sind bereits berücksichtigt.</p></div></div>
-      <div class="export-workspace">
-        <fieldset class="format-picker">
-          <legend>Dateiformat wählen</legend>
-          <p>OpenDocument ist der offene Standard. Excel und CSV bleiben jederzeit verfügbar.</p>
-          <div class="format-grid">
-            <label class="format-card"><input type="radio" name="export-format" value="ods" checked><span class="format-icon" aria-hidden="true">ODS</span><span class="format-copy"><strong>OpenDocument</strong><small>Offen · empfohlen</small></span><span class="format-badge">Empfohlen</span></label>
-            <label class="format-card"><input type="radio" name="export-format" value="xlsx"><span class="format-icon" aria-hidden="true">XLSX</span><span class="format-copy"><strong>Excel</strong><small>Mit Drucklayout</small></span></label>
-            <label class="format-card"><input type="radio" name="export-format" value="csv"><span class="format-icon" aria-hidden="true">CSV</span><span class="format-copy"><strong>CSV</strong><small>Schlicht und universell</small></span></label>
-          </div>
-        </fieldset>
-        <div class="export-actions">
-          <button id="create-plan" class="secondary" type="button">Miniplan vorbereiten</button>
-          <button id="download" class="primary download-button" type="button" disabled><span id="download-label">ODS herunterladen</span><span aria-hidden="true">→</span></button>
-        </div>
+      <div class="actions">
+        <button id="create-plan" class="primary" type="button">Miniplan vorbereiten</button>
+        <label class="format-field"><span>Ausgabeformat</span><select id="export-format" aria-label="Exportformat"><option value="ods" selected>OpenDocument (.ods)</option><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV (.csv)</option></select></label>
+        <button id="download" class="primary" type="button" disabled>Datei herunterladen</button>
       </div>
       <div id="plan-preview" class="preview" hidden></div>
     </section>

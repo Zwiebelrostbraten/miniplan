@@ -14,15 +14,6 @@ const state = { services: [], diagnostics: [], plan: [], bytes: null };
 const $ = (id) => document.getElementById(id);
 const fields = ['date', 'start', 'end', 'name', 'location', 'dayInfo'];
 const labels = { date: 'Datum', start: 'Beginn', end: 'Ende', name: 'Gottesdienst', location: 'Ort', dayInfo: 'Info' };
-const exportLabels = { ods: 'ODS', xlsx: 'Excel', csv: 'CSV' };
-
-function selectedExportFormat() {
-  return document.querySelector('input[name="export-format"]:checked')?.value ?? 'ods';
-}
-
-function updateDownloadLabel() {
-  $('download-label').textContent = `${exportLabels[selectedExportFormat()]} herunterladen`;
-}
 
 function message(text, problem = false) {
   const node = $('message');
@@ -114,24 +105,17 @@ function createPlan() {
   if (!state.plan.length) { message('Keine passenden Gottesdienste für diese Gemeinde gefunden.', true); return; }
   $('plan-preview').hidden = false;
   const preview = $('plan-preview'); preview.replaceChildren();
-  const title = document.createElement('h3'); title.textContent = `Vorschau · ${state.plan.length} Einträge`;
+  const title = document.createElement('h3'); title.textContent = `${state.plan.length} Einträge für den Miniplan`;
   const list = document.createElement('ul');
-  state.plan.slice(0, 6).forEach((item) => {
-    const line = document.createElement('li'); line.className = 'preview-row';
-    const date = document.createElement('span'); date.className = 'preview-date'; date.textContent = item.date.split('-').reverse().join('.');
-    const time = document.createElement('span'); time.className = 'preview-time'; time.textContent = item.start ?? '–';
-    const service = document.createElement('span'); service.className = 'preview-service'; service.textContent = item.label;
-    const duties = document.createElement('span'); duties.className = 'preview-duties'; duties.textContent = item.duties.filter(Boolean).join(', ') || 'Wochendienst';
-    line.append(date, time, service, duties); list.append(line);
-  });
-  if (state.plan.length > 6) { const more = document.createElement('li'); more.className = 'preview-more'; more.textContent = `… und ${state.plan.length - 6} weitere`; list.append(more); }
+  state.plan.slice(0, 6).forEach((item) => { const line = document.createElement('li'); line.textContent = `${item.date} · ${item.start ?? '–'} · ${item.label} (${item.duties.filter(Boolean).join(', ') || 'Wochendienst'})`; list.append(line); });
+  if (state.plan.length > 6) { const more = document.createElement('li'); more.textContent = `… und ${state.plan.length - 6} weitere`; list.append(more); }
   preview.append(title, list); $('download').disabled = false; message('Miniplan ist bereit zum Export.');
 }
 
 async function download() {
   try {
     const parish = $('parish').value.trim() || 'St. Georg';
-    const format = selectedExportFormat();
+    const format = $('export-format').value;
     const first = state.plan[0].date.split('-').reverse().join('.');
     const last = state.plan.at(-1).date.split('-').reverse().join('.');
     const filename = `${parish} - Miniplan vom ${first} - ${last}.${format}`;
@@ -146,8 +130,6 @@ async function download() {
   } catch (error) { message(error.message || 'Die Datei konnte nicht erstellt werden.', true); }
 }
 
-for (const input of document.querySelectorAll('input[name="export-format"]')) input.addEventListener('change', updateDownloadLabel);
-updateDownloadLabel();
 $('file-input').addEventListener('change', (event) => importFiles(event.target.files));
 $('add-service').addEventListener('click', addService);
 $('load-demo').addEventListener('click', loadDemo);
