@@ -1,40 +1,60 @@
-import * as pdfjsLib from 'pdfjs-dist/build/pdf.js';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import { normalizeText, parseGermanDate, parseTime } from './normalize.js';
 
-const BOUNDARIES = [70, 121, 160, 400];
+const Y_TOLERANCE = 2.5;
+const IGNORED_TEXT = ['Terminkalender', 'Ausdruck vom', 'Custos', 'Seite '];
 
-function columnFor(x) {
-  if (x < BOUNDARIES[0]) return 0;
-  if (x < BOUNDARIES[1]) return 1;
-  if (x < BOUNDARIES[2]) return 2;
-  if (x < BOUNDARIES[3]) return 3;
-  return 4;
+function looksLikeDate(value) {
+  return /^(?:Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),/i.test(normalizeText(value));
 }
 
-export function rowsFromTextItems(items) {
+function columnFor(x, width) {
+  const boundaries = [width * 0.135, width * 0.21, width * 0.29, width * 0.67];
+  return boundaries.filter((boundary) => x >= boundary).length;
+}
+
+export function rowsFromTextItems(items, width = 595.247) {
+  const ordered = items
+    .flatMap((item) => {
+      const text = normalizeText(item.str);
+      const words = [...text.matchAll(/\S+/g)];
+      const unit = Number.isFinite(item.width) && text.length ? item.width / text.length : 0;
+      return words.map((match) => ({
+        text: match[0],
+        x: item.transform[4] + (match.index * unit),
+        y: item.transform[5],
+      }));
+    })
+    .filter((item) => item.text)
+    .sort((a, b) => b.y - a.y || a.x - b.x);
   const lines = [];
-  for (const item of items) {
-    const text = normalizeText(item.str);
-    if (!text) continue;
-    const [,,,, x, y] = item.transform;
-    let line = lines.find((candidate) => Math.abs(candidate.y - y) < 3);
-    if (!line) {
-      line = { y, items: [] };
+  for (const item of ordered) {
+    let line = lines.at(-1);
+    if (!line || Math.abs(line.y - item.y) > Y_TOLERANCE) {
+      line = { y: item.y, count: 0, items: [] };
       lines.push(line);
     }
-    line.items.push({ text, x });
+    line.y = ((line.y * line.count) + item.y) / (line.count + 1);
+    line.count += 1;
+    line.items.push({ text: item.text, x: item.x });
   }
-  return lines.sort((a, b) => b.y - a.y).map((line) => {
+
+  const rows = [];
+  for (const line of lines) {
+    const lineText = normalizeText(line.items.map(({ text }) => text).join(' '));
+    if (IGNORED_TEXT.some((prefix) => lineText.startsWith(prefix))) continue;
     const columns = ['', '', '', '', ''];
     for (const { text, x } of line.items.sort((a, b) => a.x - b.x)) {
-      const column = columnFor(x);
+      const column = columnFor(x, width);
       columns[column] = normalizeText(`${columns[column]} ${text}`);
     }
-    return columns;
-  });
+    if (looksLikeDate(columns[0])) rows.push([normalizeText(columns.join(' ')), '', '', '', '']);
+    else rows.push(columns);
+  }
+  return rows;
 }
 
-function parseRows(rows, source) {
+export function parseRows(rows, source) {
   const services = [];
   const diagnostics = [];
   let date = null;
@@ -48,7 +68,7 @@ function parseRows(rows, source) {
         dayInfo = [];
         return;
       } catch {
-        if (/^(?:Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),/.test(firstText)) {
+        if (looksLikeDate(firstText)) {
           date = null;
           dayInfo = [];
           diagnostics.push({ level: 'warning', message: 'Ungültiges Datum ignoriert', source, row });
@@ -57,11 +77,27 @@ function parseRows(rows, source) {
         if (date && !normalizeText(startValue)) dayInfo.push(firstText);
       }
     }
+
     const name = normalizeText(nameValue);
-    if (!name || !normalizeText(startValue)) return;
+    const location = normalizeText(locationValue);
+    const startText = normalizeText(startValue);
+    if (!firstText && !startText && (name || location)) {
+      const previous = services.at(-1);
+      if (previous && date && previous.date === date) {
+        previous.name = normalizeText(`${previous.name} ${name}`);
+        previous.location = normalizeText(`${previous.location} ${location}`);
+      } else {
+        diagnostics.push({ level: 'warning', message: 'Unvollständige Gottesdienstzeile übersprungen', source, row });
+      }
+      return;
+    }
+    if (!name || !startText) {
+      if (startText) diagnostics.push({ level: 'warning', message: 'Unvollständige Gottesdienstzeile übersprungen', source, row });
+      return;
+    }
     let start;
     try { start = parseTime(startValue); } catch {
-      if (date) diagnostics.push({ level: 'warning', message: 'Ungültige Startzeit ignoriert', source, row });
+      diagnostics.push({ level: 'warning', message: 'Ungültige Startzeit ignoriert', source, row });
       return;
     }
     if (!date) {
@@ -72,7 +108,7 @@ function parseRows(rows, source) {
     if (normalizeText(endValue)) {
       try { end = parseTime(endValue); } catch { diagnostics.push({ level: 'warning', message: 'Ungültige Endzeit ignoriert', source, row }); }
     }
-    services.push({ date, start, end, name, location: normalizeText(locationValue), dayInfo: dayInfo.join('; '), source, row });
+    services.push({ date, start, end, name, location, dayInfo: dayInfo.join('; '), source, row });
   });
   return { services, diagnostics };
 }
@@ -83,7 +119,10 @@ export async function parsePdf(input, source = 'Datei.pdf') {
   for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
     const page = await document.getPage(pageNumber);
     const content = await page.getTextContent();
-    rows.push(...rowsFromTextItems(content.items));
+    const width = page.view[2] - page.view[0];
+    rows.push(...rowsFromTextItems(content.items, width));
   }
-  return parseRows(rows, source);
+  const result = parseRows(rows, source);
+  if (!result.services.length) result.diagnostics.push({ level: 'error', message: 'Im PDF wurden keine Gottesdienste erkannt', source, row: null });
+  return result;
 }

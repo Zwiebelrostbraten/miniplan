@@ -10,7 +10,7 @@ import { createOpenSpreadsheet, downloadOpenSpreadsheet, parseOpenSpreadsheet } 
 import { parseWorkbook } from './core/xlsx-reader.js';
 
 const calendar = HolidayCalendar.fromIcsTexts([holidays, schoolHolidays, carnivalHolidays]);
-const state = { services: [], diagnostics: [], plan: [], bytes: null };
+const state = { services: [], diagnostics: [], plan: [] };
 const $ = (id) => document.getElementById(id);
 const fields = ['date', 'start', 'end', 'name', 'location', 'dayInfo'];
 const labels = { date: 'Datum', start: 'Beginn', end: 'Ende', name: 'Gottesdienst', location: 'Ort', dayInfo: 'Info' };
@@ -21,12 +21,20 @@ function message(text, problem = false) {
   node.style.color = problem ? '#91444c' : '';
 }
 
+function invalidatePlan() {
+  state.plan = [];
+  $('download').disabled = true;
+  const preview = $('plan-preview');
+  preview.hidden = true;
+  preview.replaceChildren();
+}
+
 function inputFor(service, field, index) {
   const input = document.createElement('input');
   input.type = field === 'date' ? 'date' : field === 'start' || field === 'end' ? 'time' : 'text';
   input.value = service[field] ?? '';
   input.setAttribute('aria-label', `${labels[field]} für Zeile ${index + 1}`);
-  input.addEventListener('input', () => { state.services[index][field] = input.value; state.bytes = null; $('download').disabled = true; });
+  input.addEventListener('input', () => { service[field] = input.value; invalidatePlan(); });
   return input;
 }
 
@@ -43,7 +51,7 @@ function renderServices() {
     fields.forEach((field) => { const cell = document.createElement('td'); cell.append(inputFor(service, field, index)); row.append(cell); });
     const action = document.createElement('td');
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'remove'; remove.textContent = '×'; remove.setAttribute('aria-label', `Zeile ${index + 1} löschen`);
-    remove.addEventListener('click', () => { state.services.splice(index, 1); renderServices(); });
+    remove.addEventListener('click', () => { state.services.splice(index, 1); invalidatePlan(); renderServices(); });
     action.append(remove); row.append(action); body.append(row);
   });
 }
@@ -80,7 +88,7 @@ async function importFiles(files) {
     const results = await Promise.all([...files].map(importFile));
     state.services = results.flatMap((result) => result.services);
     state.diagnostics = results.flatMap((result) => result.diagnostics);
-    state.plan = []; state.bytes = null; $('download').disabled = true;
+    invalidatePlan();
     renderServices(); renderDiagnostics();
     message(`${state.services.length} Gottesdienste eingelesen. Bitte kurz prüfen.`);
   } catch (error) { message(error.message || 'Die Datei konnte nicht gelesen werden.', true); }
@@ -88,6 +96,7 @@ async function importFiles(files) {
 
 function addService() {
   state.services.push({ date: '', start: '', end: '', name: '', location: $('parish').value, dayInfo: '', source: 'manuell', row: state.services.length + 1 });
+  invalidatePlan();
   renderServices();
 }
 
@@ -95,13 +104,12 @@ function loadDemo() {
   state.services = [
     { date: '2026-07-01', start: '18:30', end: '19:30', name: 'Eucharistiefeier', location: 'Kirche St. Georg', dayInfo: '', source: 'Beispiel', row: 1 },
     { date: '2026-07-05', start: '10:00', end: '11:00', name: 'Wortgottesdienst', location: 'Kirche St. Georg', dayInfo: '', source: 'Beispiel', row: 2 },
-  ]; state.diagnostics = []; state.bytes = null; $('download').disabled = true; renderServices(); renderDiagnostics(); message('Beispieldaten geladen.');
+  ]; state.diagnostics = []; invalidatePlan(); renderServices(); renderDiagnostics(); message('Beispieldaten geladen.');
 }
 
 function createPlan() {
-  const invalid = state.services.find((service) => !service.date || !service.start || !service.name || !service.location);
-  if (invalid) { message('Bitte Datum, Beginn, Gottesdienst und Ort für jede Zeile ausfüllen.', true); return; }
-  state.plan = buildSchedule(state.services, rules, calendar, $('parish').value.trim() || 'St. Georg');
+  const parish = $('parish').value.trim() || 'St. Georg';
+  state.plan = buildSchedule(state.services, rules, calendar, parish);
   if (!state.plan.length) { message('Keine passenden Gottesdienste für diese Gemeinde gefunden.', true); return; }
   $('plan-preview').hidden = false;
   const preview = $('plan-preview'); preview.replaceChildren();
@@ -116,14 +124,15 @@ async function download() {
   try {
     const parish = $('parish').value.trim() || 'St. Georg';
     const format = $('export-format').value;
+    if (!state.plan.length) { message('Bitte zuerst den Miniplan vorbereiten.', true); return; }
     const first = state.plan[0].date.split('-').reverse().join('.');
     const last = state.plan.at(-1).date.split('-').reverse().join('.');
     const filename = `${parish} - Miniplan vom ${first} - ${last}.${format}`;
     if (format === 'xlsx') {
-      state.bytes ??= await createMiniplanWorkbook(state.plan, parish);
-      downloadWorkbook(state.bytes, filename);
+      const bytes = await createMiniplanWorkbook(state.plan, parish);
+      downloadWorkbook(bytes, filename);
     } else {
-      const bytes = createOpenSpreadsheet(state.plan, parish, format);
+      const bytes = await createOpenSpreadsheet(state.plan, parish, format);
       downloadOpenSpreadsheet(bytes, filename, format);
     }
     message(`${format.toUpperCase()}-Datei wurde heruntergeladen.`);
@@ -135,6 +144,7 @@ $('add-service').addEventListener('click', addService);
 $('load-demo').addEventListener('click', loadDemo);
 $('create-plan').addEventListener('click', createPlan);
 $('download').addEventListener('click', download);
+$('parish').addEventListener('input', invalidatePlan);
 for (const eventName of ['dragenter', 'dragover']) $('file-input').closest('.dropzone').addEventListener(eventName, (event) => { event.preventDefault(); event.currentTarget.classList.add('dragging'); });
 for (const eventName of ['dragleave', 'drop']) $('file-input').closest('.dropzone').addEventListener(eventName, (event) => { event.preventDefault(); event.currentTarget.classList.remove('dragging'); });
 $('file-input').closest('.dropzone').addEventListener('drop', (event) => importFiles(event.dataTransfer.files));

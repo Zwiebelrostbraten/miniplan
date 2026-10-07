@@ -22,6 +22,6 @@ await Promise.all([
   writeFile('dist/miniplan.html', html),
   writeFile('dist/miniplan.css', css),
   writeFile('dist/miniplan.js', js),
-  copyFile('node_modules/pdfjs-dist/build/pdf.worker.min.js', 'dist/miniplan.worker.js'),
+  copyFile('node_modules/pdfjs-dist/build/pdf.worker.min.mjs', 'dist/miniplan.worker.js'),
 ]);
 console.log('dist/index.html und dist/miniplan.html erstellt');

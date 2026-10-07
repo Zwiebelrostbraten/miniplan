@@ -38,13 +38,17 @@ export async function createMiniplanWorkbook(entries, parish = 'St. Georg') {
     sheet.addRow([]);
   }
   const border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-  sheet.eachRow((row) => row.eachCell({ includeEmpty: true }, (cell) => {
-    cell.border = border;
-    if (cell.row > 2) {
-      cell.font = { name: 'Arial', size: 10 };
-      cell.alignment = { vertical: 'top', wrapText: true };
+  for (let rowNumber = 1; rowNumber <= sheet.rowCount; rowNumber += 1) {
+    const row = sheet.getRow(rowNumber);
+    for (let column = 1; column <= 7; column += 1) {
+      const cell = row.getCell(column);
+      cell.border = border;
+      if (rowNumber > 2) {
+        cell.font = { name: 'Arial', size: 10 };
+        cell.alignment = { vertical: 'top', wrapText: true };
+      }
     }
-  }));
+  }
   sheet.pageSetup = { orientation: 'landscape', fitToWidth: 1, fitToPage: true, printArea: `A1:G${sheet.rowCount}`, printTitlesRow: '1:2' };
   return workbook.xlsx.writeBuffer();
 }
