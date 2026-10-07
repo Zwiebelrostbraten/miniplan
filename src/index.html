@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Miniplan · St. Georg</title>
+  <style>/* INLINE_CSS */</style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">St. Georg · lokal im Browser</p>
+      <h1>Miniplan erstellen</h1>
+      <p>Plan hochladen, kurz prüfen, Excel herunterladen. Deine Dateien verlassen dieses Gerät nicht.</p>
+    </header>
+
+    <section class="card" aria-labelledby="import-title">
+      <div class="section-heading"><span class="step">1</span><div><h2 id="import-title">Gottesdienstplan einlesen</h2><p>PDF oder Excel aus dem Pfarrbüro auswählen.</p></div></div>
+      <label class="dropzone" for="file-input"><input id="file-input" type="file" accept=".pdf,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple><strong>Dateien auswählen</strong><span>oder hierher ziehen · PDF und XLSX</span></label>
+      <ul id="selected-files" class="selected-files" aria-live="polite"><li class="file-placeholder">Noch keine Datei ausgewählt.</li></ul>
+      <div class="options"><label>Gemeinde <input id="parish" value="St. Georg" autocomplete="organization"></label><button id="load-demo" class="ghost" type="button">Beispieldaten laden</button></div>
+    </section>
+
+    <section class="card" aria-labelledby="review-title">
+      <div class="section-heading"><span class="step">2</span><div><h2 id="review-title">Gelesene Gottesdienste prüfen</h2><p>Fehler können direkt in der Tabelle korrigiert werden.</p></div><button id="add-service" class="ghost compact" type="button">+ Gottesdienst</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Datum</th><th>Beginn</th><th>Ende</th><th>Gottesdienst</th><th>Ort</th><th>Info</th><th></th></tr></thead><tbody id="services"><tr class="empty"><td colspan="7">Noch keine Daten geladen.</td></tr></tbody></table></div>
+      <div id="diagnostics" class="diagnostics" aria-live="polite"></div>
+    </section>
+
+    <section class="card action-card" aria-labelledby="export-title">
+      <div class="section-heading"><span class="step">3</span><div><h2 id="export-title">Miniplan erzeugen</h2><p>Ferien und Feiertage in Baden-Württemberg sind bereits berücksichtigt.</p></div></div>
+      <div class="actions"><button id="create-plan" class="primary" type="button">Miniplan vorbereiten</button><button id="download" class="primary" type="button" disabled>Excel herunterladen</button></div>
+      <div id="plan-preview" class="preview" hidden></div>
+    </section>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+  </main>
+  <footer>Funktioniert ohne Konto, Server oder Internetverbindung.</footer>
+  <script>/* INLINE_JS */</script>
+</body>
+</html>

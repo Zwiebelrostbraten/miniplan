@@ -1,0 +1,170 @@
+{
+"Eucharistiefeier": {
+  "Dienste": ["Leuchter", "Altar", "Sammler", "Sammler"],
+  "Bezeichnung": "Eu",
+  "Dienste in Ferien": ["Leuchter", "Altar"]
+  },
+"Wortgottesdienst": {
+  "Dienste": ["Leuchter", "Sammler"],
+  "Bezeichnung": "WGF"
+  },
+"Eu mit ToGe": {
+  "Dienste": ["Altar"],
+  "Bezeichnung": "Eu"
+  },
+"Schülergottesdienst": {
+  "Dienste": ["Leuchter"],
+  "Bezeichnung": "SchGD"
+  },
+"Trauung": {
+  "Dienste": ["Altar"],
+  "Bezeichnung": "Trauung"
+  },
+"Tauffeier": {
+  "Dienste": ["Altar"],
+  "Bezeichnung": "Tauffeier"
+  },
+"Sondergottesdienste": {
+  "simple": [
+    {   
+      "Name": "Erstkommunion", 
+      "Dienste": ["kl. Kreuz", "Fahnen", "Leuchter", "Altar", "Sammler"],
+      "Bezeichnung": "Erstkommunion"
+    },
+    {   
+      "Name": "Erstkommunion I", 
+      "Dienste": ["kl. Kreuz", "Fahnen", "Leuchter", "Altar", "Sammler"],
+      "Bezeichnung": "Erstkommunion I."
+    },
+    {   
+      "Name": "Erstkommunion II", 
+      "Dienste": ["kl. Kreuz", "Fahnen", "Leuchter", "Altar", "Sammler"],
+      "Bezeichnung": "Erstkommunion II."
+    },
+    {   
+      "Name": "Firmung", 
+      "Dienste": ["Leuchter", "Altar", "Sammler", "Sammler"],
+      "Bezeichnung": "Firmung"
+    },
+    {   
+      "Name": "Firmung I", 
+      "Dienste": ["Leuchter", "Altar", "Sammler", "Sammler"],
+      "Bezeichnung": "Firmung I."
+    },
+    {   
+      "Name": "Dankandacht", 
+      "Dienste": ["kl. Kreuz", "Fahnen", "Leuchter", "Altar", "Sammler"],
+      "Bezeichnung": "Dankandacht"
+    },
+    {
+      "Name": "Osternacht",
+      "Dienste": ["Rf.", "Leuchter", "Altar", "Linie", "Linie", "Linie", "Linie", "Linie", "Linie", "Linie", "Linie", "Linie"],
+      "Bezeichnung": "Osternacht"
+    },
+    {
+      "Name": "Maiandacht",
+      "Dienste": ["Rf.", "Leuchter", "Altar", "Linie"],
+      "Bezeichnung": "Maiandacht",
+      "Ort": "Kirche St. Georg"
+    },
+    {
+      "Name": "Fronleichnam",
+      "Dienste": ["kl. Kreuz", "Fahnen", "gr. Fahnen", "Laternen", "Rf.", "Altar", "Leuchter", "Lautspr.", "gr. Kreuz", "Linie", "Linie", "Linie", "Linie", "Linie"],
+      "Bezeichnung": "Fronleichnam"
+    },
+    {
+      "Name": "Christmette",
+      "Dienste": ["Rf.", "Leuchter", "Altar", "Linie", "Linie", "Linie", "Linie", "Linie", "Linie", "Linie", "Linie"],
+      "Bezeichnung": "Christmette"
+    },
+    {
+      "Name": "Jahresschlussandacht",
+      "Dienste": ["Leuchter", "Altar", "Sammler", "Sammler"],
+      "Bezeichnung": "Jahresschlussandacht"
+    },
+    {
+      "Name": "Festgottesdienst",
+      "Dienste": ["Rf.", "Leuchter", "Altar", "Linie"],
+      "Bezeichnung": "Festgottesdienst"
+    },
+    {
+      "Name": "Rorate",
+      "Dienste": ["Leuchter", "Altar"],
+      "Bezeichnung": "Rorate"
+    },
+    {
+      "Name": "Eröffnung Tag der Ewigen Anbetung",
+      "Dienste": ["Leuchter", "Altar"],
+      "Bezeichnung": "Eu - TdEA"
+    },
+    {
+      "Name": "Abschluss Tag der Ewigen Anbetung",
+      "Dienste": ["Leuchter", "Altar"],
+      "Bezeichnung": "Andacht - TdEA"
+    },
+    {
+      "Name": "Aschenkreuz",
+      "Dienste": ["(Rf.)", "Leuchter", "Altar"],
+      "Bezeichnung": "Aschermittwoch"
+    },
+    {
+      "Name": "Karfreitagsliturgie",
+      "Dienste": ["(Rf.)", "Leuchter", "Altar"],
+      "Bezeichnung": "Karfreitag"
+    },
+    {
+      "Name": "Abendmahlfeier",
+      "Dienste": ["(Rf.)", "Leuchter", "Altar"],
+      "Bezeichnung": "Gründonnerstag"
+    },
+    {
+      "Name": "Erntedank",
+      "Dienste": ["(Rf.)", "Leuchter", "Altar", "Sammler"],
+      "Bezeichnung": "Erntedank"
+    },
+    {
+      "Name": "Investitur",
+      "Dienste": ["kl. Kreuz", "Fahnen", "Rf.", "Leuchter", "Altar", "Linie", "Linie", "Linie", "Linie", "Linie", "Linie"],
+      "Bezeichnung": "Investitur"
+    }
+
+  ],
+  "complex": [ 
+    {
+      "Name": "Festgottesdienst",
+      "Dienste": ["kl. Kreuz", "Rf.", "Leuchter", "Altar", "Linie", "Linie", "Linie", "Linie", "Linie"],
+      "Bezeichnung": "Weihnachten",
+      "Zusatz Info": "Weihnachten",
+      "Datum": "25.12."
+    },
+    {
+      "Name": "Gräberbesuch",
+      "Dienste": ["Leuchter", "Altar"],
+      "Bezeichnung": "Allerheiligen",
+      "Zusatz Info": "Allerheiligen",
+      "Datum": "01.11."
+    },
+    {
+      "Name": "Festgottesdienst",
+      "Dienste": ["kl. Kreuz", "Fahnen", "Rf.", "Leuchter", "Altar", "Linie", "Linie", "Linie", "Linie", "Linie", "Linie"],
+      "Bezeichnung": "Ostermontag",
+      "Zusatz Info": "Ostermontag",
+      "Datum": "Kein Datum"
+    },
+    {
+      "Name": "Palm",
+      "Dienste": ["gr. Kreuz", "Rf.", "Leuchter", "Altar", "Palmstecken", "Palmstecken", "Linie", "Linie"],
+      "Bezeichnung": "Palmsonntag",
+      "Zusatz Info": "Palmsonntag",
+      "Datum": "Kein Datum"
+    },
+    {
+      "Name": "Eucharistiefeier",
+      "Dienste": ["kl. Kreuz", "Fahnen", "Rf.", "Leuchter", "Altar", "Linie", "Linie", "Linie", "Linie", "Linie"],
+      "Bezeichnung": "Pfingsten",
+      "Zusatz Info": "Pfingsten",
+      "Datum": "Kein Datum"
+    }
+  ]
+  }
+}
