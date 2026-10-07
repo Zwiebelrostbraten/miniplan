@@ -4,7 +4,7 @@
 
 Eine datensparsame, browserbasierte Web-App für den St.-Georg-Miniplan. Sie liest Gottesdienstpläne aus PDF-, Excel-, OpenDocument- oder CSV-Dateien ein, bietet eine Korrekturtabelle und erzeugt daraus einen Miniplan als formatiertes Excel-Dokument oder in offenen Tabellenformaten.
 
-**Live-Version:** https://zwiebelrostbraten.github.io/miniplan/
+**Live-Version:** https://tools.minis-mutlangen.de
 
 ## Datenschutz und Betrieb
 
