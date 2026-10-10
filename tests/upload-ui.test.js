@@ -31,6 +31,6 @@ it('uses clear copy, an unchecked location filter and a connected accessible foo
   expect(html).toContain('id="calendar-help"');
   expect(html).toMatch(/class="table-wrap"[\s\S]*class="table-scroll"[\s\S]*<\/table><\/div>\s*<button id="services-toggle"/);
   expect(css).toMatch(/\.services-toggle\{[^}]*width:100%/);
-  expect(css).toContain('.table-scroll{overflow:auto}');
+  expect(css).toMatch(/\.table-scroll\s*\{[^}]*\boverflow\s*:\s*auto\s*(?:;|\})/);
   expect(css).toContain('.services-toggle:focus-visible');
 });
