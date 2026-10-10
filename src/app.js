@@ -12,13 +12,14 @@ import { parseWorkbook } from './core/xlsx-reader.js';
 import { miniplanFilename } from './core/filename.js';
 
 const defaultCalendar = HolidayCalendar.fromIcsTexts([holidays, schoolHolidays, carnivalHolidays]);
-const state = { services: [], servicesExpanded: false, diagnostics: [], plan: [] };
+const state = { services: [], servicesExpanded: false, diagnostics: [], plan: [], busy: false };
 const $ = (id) => document.getElementById(id);
 const fields = ['date', 'start', 'end', 'name', 'location', 'dayInfo'];
 const labels = { date: 'Datum', start: 'Beginn', end: 'Ende', name: 'Gottesdienst', location: 'Ort', dayInfo: 'Info' };
 
-function message(text, problem = false) {
+function message(text, problem = false, target = 'export') {
   const node = $('message');
+  $(`${target}-feedback`).append(node);
   node.textContent = text;
   node.style.color = problem ? '#91444c' : '';
 }
@@ -26,6 +27,7 @@ function message(text, problem = false) {
 function invalidatePlan() {
   state.plan = [];
   $('download').disabled = true;
+  $('create-plan').disabled = state.busy || !state.services.length;
   const preview = $('plan-preview');
   preview.hidden = true;
   preview.replaceChildren();
@@ -63,7 +65,13 @@ function renderServices() {
   const visibleServices = state.servicesExpanded ? displayed : displayed.slice(0, 5);
   visibleServices.forEach(({ service, index }) => {
     const row = document.createElement('tr');
-    fields.forEach((field) => { const cell = document.createElement('td'); cell.append(inputFor(service, field, index)); row.append(cell); });
+    row.dataset.index = index;
+    fields.forEach((field) => {
+      const cell = document.createElement('td');
+      const label = document.createElement('label');
+      const caption = document.createElement('span'); caption.className = 'field-label'; caption.textContent = labels[field];
+      label.append(caption, inputFor(service, field, index)); cell.append(label); row.append(cell);
+    });
     const action = document.createElement('td');
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'remove'; remove.textContent = '×'; remove.setAttribute('aria-label', `Zeile ${index + 1} löschen`);
     remove.addEventListener('click', () => { state.services.splice(index, 1); invalidatePlan(); renderServices(); });
@@ -101,40 +109,58 @@ async function importFile(file) {
 
 async function importFiles(files) {
   if (!files.length) return;
+  if (state.busy) return;
+  setBusy(true);
   state.servicesExpanded = false;
   renderServices();
   invalidatePlan();
   renderSelectedFiles(files);
-  message('Dateien werden lokal verarbeitet …');
+  message('Dateien werden lokal verarbeitet …', false, 'import');
   try {
     const results = await Promise.all([...files].map(importFile));
     state.services = results.flatMap((result) => result.services);
     state.diagnostics = results.flatMap((result) => result.diagnostics);
     invalidatePlan();
     renderServices(); renderDiagnostics();
-    message(`${state.services.length} Gottesdienste eingelesen. ${state.diagnostics.length} Importhinweise. Bitte kurz prüfen.`);
+    message(`${state.services.length} Gottesdienste eingelesen. ${state.diagnostics.length} Importhinweise. Bitte kurz prüfen.`, false, 'import');
   } catch (error) {
     state.services = [];
     state.diagnostics = [];
     invalidatePlan();
     renderServices();
     renderDiagnostics();
-    message(error.message || 'Die Datei konnte nicht gelesen werden.', true);
-  }
+    message(error.message || 'Die Datei konnte nicht gelesen werden.', true, 'import');
+  } finally { setBusy(false); }
+}
+
+function setBusy(busy) {
+  state.busy = busy;
+  for (const id of ['file-input', 'load-demo', 'add-service', 'create-plan', 'rules-input', 'no-calendar', 'parish']) $(id).disabled = busy;
+  $('calendar-input').disabled = busy || $('no-calendar').checked;
+  $('services').closest('.card').setAttribute('aria-busy', String(busy));
+  $('create-plan').disabled = busy || !state.services.length;
 }
 
 function addService() {
   state.services.push({ date: '', start: '', end: '', name: '', location: $('parish').value, dayInfo: '', source: 'manuell', row: state.services.length + 1 });
+  state.servicesExpanded = true;
+  if (!$('parish').value.trim()) $('show-other-services').checked = true;
   invalidatePlan();
   renderServices();
+  const input = $('services').lastElementChild.querySelector('input');
+  input.focus();
+  input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  message('Neuer Gottesdienst: Datum und Angaben ergänzen.', false, 'review');
 }
 
 function loadDemo() {
+  $('file-input').value = '';
+  renderSelectedFiles([{ name: 'Beispieldaten geladen · 2 Gottesdienste (keine Datei).' }]);
   state.servicesExpanded = false;
   state.services = [
     { date: '2026-07-01', start: '18:30', end: '19:30', name: 'Eucharistiefeier', location: 'Kirche St. Georg', dayInfo: '', source: 'Beispiel', row: 1 },
     { date: '2026-07-05', start: '10:00', end: '11:00', name: 'Wortgottesdienst', location: 'Kirche St. Georg', dayInfo: '', source: 'Beispiel', row: 2 },
-  ]; state.diagnostics = []; invalidatePlan(); renderServices(); renderDiagnostics(); message('Beispieldaten geladen.');
+  ]; state.diagnostics = []; invalidatePlan(); renderServices(); renderDiagnostics(); message('Beispieldaten geladen.', false, 'import');
 }
 
 async function planningConfig() {
@@ -150,6 +176,9 @@ async function planningConfig() {
 }
 
 async function createPlan() {
+  invalidatePlan();
+  setBusy(true);
+  message('Miniplan wird vorbereitet …');
   try {
     const parish = $('parish').value.trim() || 'St. Georg';
     const { rules, calendar } = await planningConfig();
@@ -165,10 +194,12 @@ async function createPlan() {
   } catch (error) {
     invalidatePlan();
     message(error.message || 'Regeln oder Kalender konnten nicht gelesen werden.', true);
-  }
+  } finally { setBusy(false); }
 }
 
 async function download() {
+  $('download').disabled = true;
+  message('Datei wird erstellt …');
   try {
     const parish = $('parish').value.trim() || 'St. Georg';
     const format = $('export-format').value;
@@ -185,6 +216,7 @@ async function download() {
     }
     message(`${format.toUpperCase()}-Datei wurde heruntergeladen.`);
   } catch (error) { message(error.message || 'Die Datei konnte nicht erstellt werden.', true); }
+  finally { $('download').disabled = !state.plan.length; }
 }
 
 $('file-input').addEventListener('change', (event) => importFiles(event.target.files));
@@ -214,3 +246,4 @@ $('no-calendar').addEventListener('change', () => {
 for (const eventName of ['dragenter', 'dragover']) $('file-input').closest('.dropzone').addEventListener(eventName, (event) => { event.preventDefault(); event.currentTarget.classList.add('dragging'); });
 for (const eventName of ['dragleave', 'drop']) $('file-input').closest('.dropzone').addEventListener(eventName, (event) => { event.preventDefault(); event.currentTarget.classList.remove('dragging'); });
 $('file-input').closest('.dropzone').addEventListener('drop', (event) => importFiles(event.dataTransfer.files));
+invalidatePlan();

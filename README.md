@@ -1,132 +1,83 @@
-# Miniplan
+# MiniPlan
 
-[![Deploy GitHub Pages](https://github.com/Zwiebelrostbraten/miniplan/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Zwiebelrostbraten/miniplan/actions/workflows/deploy-pages.yml)
+MiniPlan erstellt aus Gottesdienstplänen einen Dienstplan für die Ministranten. Die Oberfläche führt in drei Schritten durch Import, Korrektur und Export. Dateien werden lokal im Browser verarbeitet; ein Konto ist nicht erforderlich.
 
-Eine datensparsame, browserbasierte Web-App für den St.-Georg-Miniplan. Sie liest Gottesdienstpläne aus PDF-, Excel-, OpenDocument- oder CSV-Dateien ein, bietet eine Korrekturtabelle und erzeugt daraus einen Miniplan als formatiertes Excel-Dokument oder in offenen Tabellenformaten.
+**Live-Version:** [tools.minis-mutlangen.de](https://tools.minis-mutlangen.de/)
 
-**Live-Version:** https://tools.minis-mutlangen.de
+## Schnellstart
 
-## Datenschutz und Betrieb
+1. Eine oder mehrere Dateien auswählen oder auf das Dateifeld ziehen. Unterstützt werden PDF, XLSX, ODS und CSV. Alternativ lassen sich Beispieldaten laden. Die gewünschte Gemeinde in Schritt 1 eintragen.
+2. Gottesdienste prüfen, Angaben korrigieren und bei Bedarf Einträge ergänzen oder löschen. Zunächst erscheinen die ersten fünf passenden Gottesdienste; der angehängte Schalter zeigt weitere. Importhinweise sind eingeklappt und sollten bei Problemen gelesen werden.
+3. „Miniplan vorbereiten“ wählen, Vorschau prüfen und die Datei herunterladen. ODS ist voreingestellt; XLSX und CSV stehen ebenfalls zur Wahl.
 
-- Keine Anmeldung, kein Server, keine Datenbank.
-- PDFs und Excel-Dateien werden ausschließlich im Browser verarbeitet.
-- Nach der ersten Seite-Ladung läuft die Anwendung auch ohne Internetverbindung weiter.
-- Die veröffentlichte Website wird automatisch aus dem `main`-Branch über GitHub Pages bereitgestellt.
+ODS und XLSX enthalten Tabellen- und Druckformatierung. CSV enthält die Planwerte als UTF-8 mit Semikolontrennung, ohne Drucklayout. Ein Export ist eine Dienstplantabelle, keine automatische Zuteilung einzelner Personen. Änderungen an Daten, Gemeinde, Regeln oder Kalendern erfordern eine neue Vorbereitung. Ein fehlgeschlagener Ersatzimport entfernt den bisherigen Plan und sperrt dessen Download.
 
-> **Hinweis:** Gottesdienstpläne vor dem Export immer in der Prüftabelle kontrollieren. Die PDF-Erkennung ist auf das aktuelle fünfspaltige Layout des Pfarrbüros ausgelegt. Eingescannte PDFs benötigen zunächst eine OCR-Textschicht.
+## Anzeige und Planungsregeln
 
-## Funktionen
+Die Prüfansicht zeigt standardmäßig Orte, deren Bezeichnung die eingegebene Gemeinde enthält. Groß-/Kleinschreibung und deutsche Schreibvarianten werden vereinheitlicht. „Gottesdienste anderer Gemeinden und Orte anzeigen“ verändert ausschließlich die Ansicht: Die ausgeblendeten Daten bleiben erhalten und werden weiterhin nach denselben Regeln verarbeitet.
 
-- Import von `.pdf`, `.xlsx`, `.ods` und `.csv`
-- Sofort sichtbare, editierbare Prüftabelle für eingelesene Gottesdienste
-- Manuelles Ergänzen und Entfernen von Einträgen
-- Berücksichtigung von Ferien, Faschingsferien und Feiertagen in Baden-Württemberg
-- Konfigurierbare Gottesdienste sowie Wochendienst am Sonntag
-- Formatiertes `.xlsx` für den bisherigen Excel-Workflow
-- Offener Export als `.ods` (OpenDocument Spreadsheet) oder UTF-8-`.csv` mit Semikolontrennung
-- Lokale Beispieldaten zum gefahrlosen Testen
+Die Planung berücksichtigt Orte mit dem Gemeindenamen sowie die vollständigen Ortsangaben `extern` und `dorffest`. Andere externe Orte werden nicht automatisch zugeordnet; beispielsweise genügt „extern – andere Kirche“ nicht für diese Ausnahme. Ortsangaben deshalb sorgfältig prüfen. Auch die Anzeige aller Orte erweitert die Planung nicht.
 
-## Verwendung
+Die mitgelieferten Regeln in [src/data/services.json](src/data/services.json) bestimmen Gottesdienstarten, Bezeichnungen und Dienste. Unter „Erweiterte Einstellungen“ kann eine eigene JSON-Regeldatei mit derselben Struktur geladen werden. Sonderregeln können Namen, Datum, Zusatzinformationen und Ort berücksichtigen. Einträge mit „entfällt“, Friedensgebete und Totengedenken werden nicht eingeplant. Sonntäglicher Wochendienst wird im Zeitraum der relevanten Gottesdienste ergänzt.
 
-### Online
+Standardmäßig verwendet MiniPlan die mitgelieferten Ferien-, Faschingsferien- und Feiertagskalender für Baden-Württemberg. Deren enthaltene Zeiträume sind begrenzt; für andere Jahre oder Regionen die ICS-Dateien prüfen und bei Bedarf eigene Kalender laden. Eigene ICS-Dateien **ersetzen** gemeinsam die Standardkalender. „Ferien- und Feiertagsprüfung deaktivieren“ verwendet keinen Kalender. Der Hinweis in Schritt 3 zeigt die aktive Auswahl. Die Kalender beeinflussen insbesondere Donnerstagsgottesdienste und Schülergottesdienste; Details stehen in [src/core/schedule.js](src/core/schedule.js).
 
-Die aktuelle Version unter https://zwiebelrostbraten.github.io/miniplan/ öffnen. Datei auswählen, Daten prüfen und vor dem Download im Formatmenü wählen:
+## Importgrenzen
 
-- **OpenDocument (`.ods`)** ist der Standardexport und das offene Tabellenformat für LibreOffice, OnlyOffice und ähnliche Programme.
-- **Excel (`.xlsx`)** bleibt wählbar und behält das bisherige Drucklayout und die Formatierung.
-- **CSV (`.csv`)** ist eine einfache UTF-8-Datei mit deutscher Semikolontrennung; sie enthält die Plan-Daten, jedoch keine Druckformatierung.
+Der Tabellenimport erwartet den Aufbau des Pfarrbüroplans mit Datumszeilen und den Spalten Beginn, Ende, Gottesdienst und Ort. Beliebige Tabellenlayouts werden nicht automatisch erkannt.
 
-Alle drei Exportwege funktionieren komplett im Browser.
+Die PDF-Erkennung ist auf das fünfspaltige Layout des Pfarrbüros ausgelegt und liest vorhandenen Text anhand seiner Positionen. Reine Scans benötigen vorher eine Textschicht durch OCR. Umbrüche, ungewöhnliche Spaltenpositionen oder beschädigte Texte können zu fehlenden oder falsch zugeordneten Angaben führen. Auch ein Import ohne Hinweise ersetzt keine fachliche Kontrolle. Die PDF-Semantik wird eigenständig geprüft; eine pauschale Übereinstimmung mit dem ursprünglichen Python-PDF-Reader wird nicht zugesichert.
 
-Unter **Erweiterte Einstellungen** lassen sich eine eigene Regeldatei (`services.json`)
-und eigene ICS-Kalender auswählen. Eigene Kalender ersetzen die mitgelieferten
-Kalender. Die Option „Ferien- und Feiertagsprüfung deaktivieren“ entspricht
-Python mit einer leeren Kalenderliste. Änderungen an diesen Einstellungen oder
-ein neuer Import machen einen zuvor vorbereiteten Export ungültig.
+## Datenschutz und Offline-Nutzung
 
-### Vollständig lokal
+Import, Planung und Export erfolgen im Browser. Die Anwendung überträgt die ausgewählten Dateien nicht an einen Server und bindet keine CDN-Skripte oder entfernten Laufzeitressourcen ein. Beim Öffnen der Website werden deren Dateien vom Hosting geladen. Solange die Seite geöffnet bleibt, ist die Verarbeitung auch ohne Internet möglich; eine erneute Offline-Navigation zur Website ist nicht durch einen Service Worker abgesichert. Bearbeitungen werden nicht dauerhaft gespeichert und gehen beim Neuladen verloren.
 
-Nach einem Build liegen die Dateien in `dist/`. Den gesamten Ordner zusammenhalten und `dist/miniplan.html` im Browser öffnen. Die vier Laufzeitdateien dürfen nicht getrennt werden:
+Für eine verlässlich lokal startbare Kopie den Build erstellen und diese vier Dateien aus `dist/` gemeinsam aufbewahren:
 
 - `miniplan.html`
 - `miniplan.css`
 - `miniplan.js`
 - `miniplan.worker.js`
 
-`index.html` ist zusätzlich für GitHub Pages vorhanden.
+`miniplan.html` lässt sich direkt als lokale Datei öffnen. Der Worker gehört zur PDF-Verarbeitung. `dist/index.html` ist eine zusätzliche Einstiegseite für das Hosting.
 
-## Entwicklung
+## Entwicklung und Prüfungen
 
-Voraussetzung: Node.js 22 oder neuer.
+Voraussetzung: Node.js 22 oder neuer und npm.
 
-```bash
+```sh
 npm ci
-npm test
-npm run lint
 npm run build
-```
-
-Oder alle Prüfungen in einem Schritt:
-
-```bash
 npm run check
 ```
 
-Die Repository-/CI-Suite benötigt keine externe Python-Referenz. Der semantische
-Regressionstest in `tests/pdf-real.test.js` wird ausdrücklich als übersprungen
-gemeldet, wenn `MINIPLAN_REFERENCE` nicht gesetzt ist oder die PDF-Testdatei
-`01.07.2026-04.10.2026.pdf` dort fehlt. Mit vorhandener Referenz läuft er automatisch:
+`build` bündelt die lokalen Abhängigkeiten mit esbuild und schreibt die Website nach `dist/`. `check` führt ESLint sowie den Build und die Vitest-Suite aus. Einzelne Tests lassen sich gezielt mit `npx vitest run tests/service-view.test.js` ausführen.
+
+Die reguläre Suite benötigt keine Python-Referenz. Der echte PDF-Test wird ohne `MINIPLAN_REFERENCE` oder ohne passende Datei ausdrücklich übersprungen. Mit der separat vorhandenen Referenz:
 
 ```sh
 MINIPLAN_REFERENCE=../miniplan-optimized npm run check
 ```
 
-Der Build erstellt die veröffentlichbaren Dateien unter `dist/`. Diese werden nicht eingecheckt; der GitHub-Pages-Workflow baut sie bei jedem Push auf `main` neu.
+Die private Datei `01.07.2026-04.10.2026.pdf` bleibt außerhalb dieses Repositorys. Der Regressionstest erwartet 153 Quelldienste und 43 Planeinträge. Private Testdaten und erzeugte Downloads nicht einchecken.
 
-## Projektstruktur
-
-```text
-src/
-  app.js              Benutzeroberfläche und Browser-Integration
-  core/               Einlesen, Normalisierung, Regeln und Excel-Export
-  data/               Lokale Gottesdienst-, Ferien- und Feiertagsdaten
-  index.html          HTML-Vorlage
-  style.css           Oberflächengestaltung
-tests/                Unit- und Build-Tests
-.github/workflows/    Automatischer Test- und Pages-Deployment-Workflow
-```
-
-## Qualitätssicherung
-
-Der Deployment-Workflow führt vor jeder Veröffentlichung automatisch Tests, Linting und den Build aus. Ein fehlgeschlagener Check wird nicht veröffentlicht.
-
-## Lizenz
-
-[MIT](LICENSE)
-
-### Browser-Parität mit Python prüfen
-
-`scripts/browser-parity.mjs` öffnet `dist/miniplan.html` direkt über `file://`
-in Chromium (Zeitzone Europe/Berlin). Es vergleicht PDF- und XLSX-Import,
-Diagnosen, Plan und exportierte Tabellenzellen mit der Python-Referenz und prüft
-ODS sowie die erweiterten Einstellungen und fehlgeschlagene Ersatzimporte.
-Playwright ist als Entwicklungsabhängigkeit im Lockfile festgelegt. Voraussetzung
-sind das passende Chromium sowie die Python-Referenz mit ihren Abhängigkeiten
-und der PDF-Testdatei unter `../miniplan-optimized`.
-Diese Browser-Paritätsprüfung bleibt die verpflichtende lokale Prüfung mit der
-echten PDF-Datei; eine fehlende Referenz führt hier weiterhin zum Fehler, nicht
-zum Überspringen.
+Die zusätzliche Browserprüfung öffnet den lokalen Build über `file://` mit Playwright/Chromium. Sie prüft unter anderem Import und Export, mobile Bearbeitung, Ortsfilter, Vorschau, Kalenderauswahl und fehlgeschlagene Ersatzimporte. Für den Vergleich der Planung und Tabellenwerte benötigt sie die separate Python-Referenz samt Abhängigkeiten und echter PDF-Datei; eine fehlende Referenz führt hier zum Fehler.
 
 ```sh
-npm ci
 npx playwright install chromium
-# Unter Linux bei fehlenden Systembibliotheken: npx playwright install --with-deps chromium
+# Bei fehlenden Linux-Systembibliotheken: npx playwright install --with-deps chromium
 uv sync --project ../miniplan-optimized --frozen
 npm run test:browser
 ```
 
-Der Test verwendet automatisch die `.venv` der Python-Referenz, andernfalls
-`python3`; `PYTHON=/absolute/path/to/python` überschreibt diese Auswahl.
-`MINIPLAN_REFERENCE` überschreibt den Referenzordner. Für ein bereits installiertes
-Chromium kann `AGENT_BROWSER_EXECUTABLE_PATH` gesetzt werden. Der Test meldet den
-Pfad zu seinen temporären Testdateien und Downloads.
+`MINIPLAN_REFERENCE` überschreibt den Referenzordner. Der Test verwendet dessen `.venv`, andernfalls `python3`; `PYTHON` kann einen anderen Interpreter angeben. `AGENT_BROWSER_EXECUTABLE_PATH` erlaubt ein bereits installiertes Chromium. Temporäre Testdateien und Downloads liegen außerhalb des Repositorys; der Test meldet ihren Pfad. UI-Screenshots werden unter `/tmp/miniplan-desktop.png`, `/tmp/miniplan-mobile-360.png` und `/tmp/miniplan-mobile-390.png` gespeichert.
+
+## Veröffentlichung
+
+[.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml) installiert unter Node.js 22 die Abhängigkeiten und führt `npm run check` aus. Bei einem Push auf `main` oder manuellem Workflow-Start wird anschließend `dist/` als GitHub-Pages-Artefakt veröffentlicht. Die Browserprüfung mit privater Referenz läuft nicht in diesem Workflow. Build-Artefakte werden nicht eingecheckt.
+
+Die Datei [CNAME](CNAME) enthält `tools.minis-mutlangen.de`. Der aktuelle Build kopiert sie nicht nach `dist/`; die benutzerdefinierte Domain muss daher in den GitHub-Pages-Einstellungen mit passender DNS-Konfiguration eingerichtet bleiben.
+
+## Lizenz
+
+[MIT](LICENSE)

@@ -151,8 +151,8 @@ try {
   assert.equal(await serviceRows.count(), 2);
   assert.equal(await servicesToggle.isVisible(), false);
   for (let i = 0; i < 4; i++) await page.locator('#add-service').click();
-  assert.equal(await serviceRows.count(), 5, 'demo resets expansion');
-  await servicesToggle.click();
+  assert.equal(await serviceRows.count(), 6, 'addition reveals the new row');
+  assert.equal(await page.locator('#services input').last().evaluate((node) => node.closest('tr').querySelector('input') === document.activeElement), true);
   await page.getByRole('button', { name: 'Zeile 6 löschen', exact: true }).click();
   assert.equal(await serviceRows.count(), 5);
   assert.equal(await servicesToggle.isVisible(), false, 'exactly five services need no control');
@@ -172,7 +172,7 @@ try {
   assert.equal(await serviceRows.count(), 5);
   assert.equal(await servicesToggle.textContent(), '2 weitere Gottesdienste anzeigen (7 insgesamt)');
   assert.equal(await page.getByRole('textbox', { name: 'Ort für Zeile 2', exact: true }).inputValue(), 'Kirche STRASSE');
-  for (const width of [1280, 375]) {
+  for (const width of [1280, 768, 390, 360]) {
     await page.setViewportSize({ width, height: 900 });
     const layout = await page.locator('.table-wrap').evaluate((wrap) => {
       const button = wrap.querySelector('#services-toggle');
@@ -191,7 +191,15 @@ try {
     assert.equal(layout.radius, '10px');
     assert.equal(layout.overflow, 'auto');
     assert.equal(layout.pageOverflow, false);
-    if (width === 375) assert.equal(layout.scrolls, true);
+    if (width < 700) {
+      assert.equal(layout.scrolls, false, 'mobile editor needs no horizontal scrolling');
+      const input = page.getByRole('textbox', { name: 'Gottesdienst für Zeile 2', exact: true });
+      await input.fill('Tauffeier mit einem sehr langen Namen und weiteren Angaben');
+      assert.equal(await input.evaluate((node) => getComputedStyle(node).fontSize), '16px');
+      assert.ok((await input.boundingBox()).height >= 44);
+      assert.equal(await input.locator('..').locator('.field-label').isVisible(), true);
+      await page.screenshot({ path: `/tmp/miniplan-mobile-${width}.png`, fullPage: true });
+    }
     await servicesToggle.focus();
     await page.keyboard.press('Enter');
     assert.equal(await serviceRows.count(), 7);
@@ -217,9 +225,16 @@ try {
   await page.locator('#parish').focus();
   assert.equal(await servicesToggle.isVisible(), false, 'location edit drops the displayed count to five');
   assert.equal(await serviceRows.count(), 5);
+  await page.setViewportSize({ width: 360, height: 900 });
   await page.locator('#add-service').click();
-  assert.equal(await servicesToggle.textContent(), '1 weitere Gottesdienste anzeigen (6 insgesamt)');
-  await servicesToggle.click();
+  assert.equal(await serviceRows.count(), 6);
+  assert.equal(await page.locator('#services tr').last().locator('input').first().evaluate((node) => node === document.activeElement), true);
+  await page.locator('#services tr').last().locator('input').nth(3).fill('Neuer langer Gottesdienstname');
+  await page.getByRole('button', { name: 'Zeile 10 löschen', exact: true }).click();
+  assert.equal(await serviceRows.count(), 5);
+  await page.locator('#add-service').click();
+  assert.equal(await servicesToggle.textContent(), 'Auf 5 Gottesdienste reduzieren (6 insgesamt)');
+  assert.equal(await servicesToggle.getAttribute('aria-expanded'), 'true');
   assert.equal(await page.getByRole('textbox', { name: 'Ort für Zeile 10', exact: true }).inputValue(), ' Straße ');
   await page.locator('#parish').fill('Unbekannt');
   assert.equal(await serviceRows.count(), 0);
@@ -239,7 +254,7 @@ try {
   await page.locator('#parish').fill('St. Georg');
   await page.locator('.advanced-options').evaluate((node) => { node.open = true; });
   assert.ok(!/Python|Python-Programm|Server|Browser/.test(await page.locator('body').innerText()));
-  console.log('Location filter: German folding, source-safe edits/removals, display-only planning, live parish/empty states, manual addition, import reset; connected footer at 1280px/375px with keyboard: PASS');
+  console.log('Location filter: German folding, source-safe edits/removals, display-only planning, live parish/empty states, manual addition, import reset; connected footer at 1280px/768px/390px/360px with keyboard: PASS');
   const pdfServices = await importFile(resolve(reference, '01.07.2026-04.10.2026.pdf'));
   assertPdfServices(pdfServices);
   await writeFile(resolve(output, 'pdf-services.json'), JSON.stringify(pdfServices));
@@ -320,7 +335,10 @@ try {
   await exportPlan(oracle.xlsx, 'ods');
   assert.deepEqual(errors, []);
   console.log('XLSX/ODS import, scheduling, export; custom rules/calendar/no-calendar; invalid configuration: PASS');
-  console.log(`Artifacts: ${output}`);
+  await page.locator('#load-demo').click();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.screenshot({ path: '/tmp/miniplan-desktop.png', fullPage: true });
+  console.log(`Artifacts: ${output}; screenshots: /tmp/miniplan-desktop.png, /tmp/miniplan-mobile-360.png, /tmp/miniplan-mobile-390.png`);
 } finally {
   await browser.close();
 }
