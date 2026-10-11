@@ -1,13 +1,13 @@
 # MiniPlan
 
-MiniPlan erstellt aus Gottesdienstplänen einen Dienstplan für die Ministranten. Die Oberfläche führt in drei Schritten durch Import, Korrektur und Export. Dateien werden lokal im Browser verarbeitet; ein Konto ist nicht erforderlich.
+MiniPlan erstellt aus Gottesdienstplänen einen Dienstplan für die Ministranten. Der kompakte Arbeitsbereich verbindet Import, Prüfung und Export. Dateien werden lokal im Browser verarbeitet; ein Konto ist nicht erforderlich.
 
 **Live-Version:** [tools.minis-mutlangen.de](https://tools.minis-mutlangen.de/)
 
 ## Schnellstart
 
-1. Eine oder mehrere Dateien auswählen oder auf das Dateifeld ziehen. Unterstützt werden PDF, XLSX, ODS und CSV. Alternativ lassen sich Beispieldaten laden. Die gewünschte Gemeinde in Schritt 1 eintragen.
-2. Gottesdienste prüfen, Angaben korrigieren und bei Bedarf Einträge ergänzen oder löschen. Zunächst erscheinen die ersten fünf passenden Gottesdienste; der angehängte Schalter zeigt weitere. Importhinweise sind eingeklappt und sollten bei Problemen gelesen werden.
+1. Eine oder mehrere Dateien auswählen oder auf das Dateifeld ziehen. Unterstützt werden PDF, XLSX, ODS und CSV. Beispieldaten stehen unter „Einstellungen“. Die gewünschte Gemeinde direkt über der Liste eintragen.
+2. Nach dem Import „Gottesdienste prüfen“ wählen. Einzelne Einträge mit dem Stiftsymbol öffnen und speichern oder abbrechen. Das Papierkorbsymbol löscht einen Eintrag unmittelbar ohne Rückfrage. „Hinzufügen“ öffnet einen neuen Entwurf, der erst beim Speichern übernommen wird. Zunächst erscheinen die ersten fünf passenden Gottesdienste; der angehängte Schalter zeigt weitere. Importhinweise sind eingeklappt und sollten bei Problemen gelesen werden.
 3. „Miniplan vorbereiten“ wählen, Vorschau prüfen und die Datei herunterladen. ODS ist voreingestellt; XLSX und CSV stehen ebenfalls zur Wahl.
 
 ODS und XLSX enthalten Tabellen- und Druckformatierung. CSV enthält die Planwerte als UTF-8 mit Semikolontrennung, ohne Drucklayout. Ein Export ist eine Dienstplantabelle, keine automatische Zuteilung einzelner Personen. Änderungen an Daten, Gemeinde, Regeln oder Kalendern erfordern eine neue Vorbereitung. Ein fehlgeschlagener Ersatzimport entfernt den bisherigen Plan und sperrt dessen Download.
@@ -18,9 +18,9 @@ Die Prüfansicht zeigt standardmäßig Orte, deren Bezeichnung die eingegebene G
 
 Die Planung berücksichtigt Orte mit dem Gemeindenamen sowie die vollständigen Ortsangaben `extern` und `dorffest`. Andere externe Orte werden nicht automatisch zugeordnet; beispielsweise genügt „extern – andere Kirche“ nicht für diese Ausnahme. Ortsangaben deshalb sorgfältig prüfen. Auch die Anzeige aller Orte erweitert die Planung nicht.
 
-Die mitgelieferten Regeln in [src/data/services.json](src/data/services.json) bestimmen Gottesdienstarten, Bezeichnungen und Dienste. Unter „Erweiterte Einstellungen“ kann eine eigene JSON-Regeldatei mit derselben Struktur geladen werden. Sonderregeln können Namen, Datum, Zusatzinformationen und Ort berücksichtigen. Einträge mit „entfällt“, Friedensgebete und Totengedenken werden nicht eingeplant. Sonntäglicher Wochendienst wird im Zeitraum der relevanten Gottesdienste ergänzt.
+Die mitgelieferten Regeln in [src/data/services.json](src/data/services.json) bestimmen Gottesdienstarten, Bezeichnungen und Dienste. Unter „Einstellungen“ kann eine eigene JSON-Regeldatei mit derselben Struktur geladen werden. Sonderregeln können Namen, Datum, Zusatzinformationen und Ort berücksichtigen. Einträge mit „entfällt“, Friedensgebete und Totengedenken werden nicht eingeplant. Sonntäglicher Wochendienst wird im Zeitraum der relevanten Gottesdienste ergänzt.
 
-Standardmäßig verwendet MiniPlan die mitgelieferten Ferien-, Faschingsferien- und Feiertagskalender für Baden-Württemberg. Deren enthaltene Zeiträume sind begrenzt; für andere Jahre oder Regionen die ICS-Dateien prüfen und bei Bedarf eigene Kalender laden. Eigene ICS-Dateien **ersetzen** gemeinsam die Standardkalender. „Ferien- und Feiertagsprüfung deaktivieren“ verwendet keinen Kalender. Der Hinweis in Schritt 3 zeigt die aktive Auswahl. Die Kalender beeinflussen insbesondere Donnerstagsgottesdienste und Schülergottesdienste; Details stehen in [src/core/schedule.js](src/core/schedule.js).
+Standardmäßig verwendet MiniPlan die mitgelieferten Ferien-, Faschingsferien- und Feiertagskalender für Baden-Württemberg. Deren enthaltene Zeiträume sind begrenzt; für andere Jahre oder Regionen die ICS-Dateien prüfen und bei Bedarf eigene Kalender laden. Eigene ICS-Dateien **ersetzen** gemeinsam die Standardkalender. „Ferien- und Feiertagsprüfung deaktivieren“ verwendet keinen Kalender. Der Hinweis am Exportbereich zeigt die aktive Auswahl. Die Kalender beeinflussen insbesondere Donnerstagsgottesdienste und Schülergottesdienste; Details stehen in [src/core/schedule.js](src/core/schedule.js).
 
 ## Importgrenzen
 

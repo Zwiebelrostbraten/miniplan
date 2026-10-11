@@ -12,14 +12,47 @@ import { parseWorkbook } from './core/xlsx-reader.js';
 import { miniplanFilename } from './core/filename.js';
 
 const defaultCalendar = HolidayCalendar.fromIcsTexts([holidays, schoolHolidays, carnivalHolidays]);
-const state = { services: [], servicesExpanded: false, diagnostics: [], plan: [], busy: false };
+const state = { services: [], servicesExpanded: false, diagnostics: [], plan: [], busy: false, editor: null };
 const $ = (id) => document.getElementById(id);
 const fields = ['date', 'start', 'end', 'name', 'location', 'dayInfo'];
 const labels = { date: 'Datum', start: 'Beginn', end: 'Ende', name: 'Gottesdienst', location: 'Ort', dayInfo: 'Info' };
+const iconPaths = {
+  edit: '<path d="m16 3 5 5-12 12-6 1 1-6Z"/><path d="m14 5 5 5"/>',
+  trash: '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  upload: '<path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/>',
+  download: '<path d="M12 3v13m-5-5 5 5 5-5M4 16v5h16v-5"/>',
+  chevron: '<path d="m6 9 6 6 6-6"/>',
+  close: '<path d="m6 6 12 12M18 6 6 18"/>',
+  settings: '<path d="m9 3-1 3-3 1-2 4 2 2v4l4 3 3-1 3 1 4-3v-4l2-2-2-4-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/>',
+};
+function icon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = iconPaths[name];
+  return svg;
+}
+function actionIcon(button, name, tooltip) {
+  button.classList.add('icon-button'); button.append(icon(name));
+  const hint = document.createElement('span'); hint.className = 'tooltip'; hint.textContent = tooltip;
+  hint.setAttribute('aria-hidden', 'true'); button.append(hint);
+}
+function discardEditor() {
+  if (!state.editor) return true;
+  const changed = fields.some((field) => (state.editor.draft[field] ?? '') !== (state.editor.original[field] ?? ''));
+  if (changed && !window.confirm('Ungespeicherte Änderungen verwerfen?')) return false;
+  state.editor = null;
+  return true;
+}
+window.addEventListener('beforeunload', (event) => {
+  if (state.editor && fields.some((field) => (state.editor.draft[field] ?? '') !== (state.editor.original[field] ?? ''))) {
+    event.preventDefault(); event.returnValue = '';
+  }
+});
+
 
 function message(text, problem = false, target = 'export') {
-  const node = $('message');
-  $(`${target}-feedback`).append(node);
+  const node = $(target === 'import' ? 'message' : `${target}-message`);
   node.textContent = text;
   node.style.color = problem ? '#91444c' : '';
 }
@@ -33,49 +66,116 @@ function invalidatePlan() {
   preview.replaceChildren();
 }
 
-function inputFor(service, field, index) {
-  const input = document.createElement('input');
-  input.type = field === 'date' ? 'date' : field === 'start' || field === 'end' ? 'time' : 'text';
-  input.value = service[field] ?? '';
-  input.setAttribute('aria-label', `${labels[field]} für Zeile ${index + 1}`);
-  input.addEventListener('input', () => { service[field] = input.value; invalidatePlan(); });
-  if (field === 'location') input.addEventListener('change', renderServices);
-  return input;
+function focusReview() {
+  $('review-title').focus({ preventScroll: true });
+  $('review-title').scrollIntoView({ block: 'start' });
 }
 
+function openEditor(service = null) {
+  if (!discardEditor()) return;
+  state.editor = { service, draft: { ...(service || { date: '', start: '', end: '', name: '', location: $('parish').value, dayInfo: '', source: 'manuell', row: state.services.length + 1 }) } };
+  state.editor.original = { ...state.editor.draft };
+  renderServices();
+  const input = $('services').querySelector('.service-editor input');
+  input.focus({ preventScroll: true });
+  input.scrollIntoView({ block: 'center' });
+}
+
+function editorRow() {
+  const { service, draft } = state.editor;
+  const row = document.createElement('tr'); row.className = 'editor-row';
+  const cell = document.createElement('td'); cell.colSpan = 7;
+  const form = document.createElement('form'); form.className = 'service-editor';
+  const title = document.createElement('strong'); title.textContent = service ? 'Gottesdienst bearbeiten' : 'Neuer Gottesdienst';
+  form.append(title);
+  const grid = document.createElement('div'); grid.className = 'editor-fields';
+  fields.forEach((field) => {
+    const label = document.createElement('label'); label.textContent = labels[field];
+    const input = document.createElement('input'); input.name = field;
+    input.type = 'text';
+    if (field === 'date') { input.placeholder = 'TT.MM.JJJJ'; input.pattern = '(?:[0-9]{2}\\.[0-9]{2}\\.[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})'; }
+    if (['start', 'end'].includes(field)) { input.placeholder = 'HH:MM'; input.pattern = '(?:[01][0-9]|2[0-3]):[0-5][0-9]'; input.inputMode = 'numeric'; }
+    input.value = field === 'date' ? germanDate(draft[field]).replace('–', '') : draft[field] ?? ''; input.required = ['date', 'start', 'name'].includes(field);
+    input.addEventListener('input', () => {
+      draft[field] = field === 'date' && /^\d{2}\.\d{2}\.\d{4}$/.test(input.value) ? input.value.split('.').reverse().join('-') : input.value;
+      if (field === 'date') {
+        const parsed = new Date(`${draft[field]}T12:00:00Z`);
+        input.setCustomValidity(!input.value || (!Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === draft[field]) ? '' : 'Bitte ein gültiges Datum eingeben.');
+      }
+    });
+    label.append(input); grid.append(label);
+  });
+  form.append(grid);
+  const actions = document.createElement('div'); actions.className = 'editor-actions';
+  const save = document.createElement('button'); save.type = 'submit'; save.className = 'primary'; save.textContent = 'Speichern';
+  const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'ghost'; cancel.textContent = 'Abbrechen';
+  cancel.addEventListener('click', () => { state.editor = null; renderServices(); focusReview(); });
+  actions.append(save, cancel);
+  form.append(actions);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (service) Object.assign(service, draft); else { state.services.push(draft); state.servicesExpanded = true; }
+    state.editor = null; invalidatePlan(); renderServices(); focusReview(); message('Gottesdienst gespeichert.', false, 'review');
+  });
+  cell.append(form); row.append(cell); return row;
+}
+
+function germanDate(value) { return value ? value.split('-').reverse().join('.') : '–'; }
+
 function renderServices() {
-  const body = $('services');
-  const toggle = $('services-toggle');
+  const body = $('services'); const toggle = $('services-toggle');
   const displayed = serviceView(state.services, $('parish').value, $('show-other-services').checked);
+  const own = serviceView(state.services, $('parish').value, false).length;
+  $('service-count').textContent = state.services.length ? `${own} eigene Gemeinde · ${state.services.length} insgesamt` : 'Noch keine Einträge';
   const total = displayed.length;
   if (total <= 5) state.servicesExpanded = false;
   toggle.hidden = total <= 5;
   toggle.setAttribute('aria-expanded', String(state.servicesExpanded));
-  toggle.textContent = state.servicesExpanded
-    ? `Auf 5 Gottesdienste reduzieren (${total} insgesamt)`
-    : `${total - 5} weitere Gottesdienste anzeigen (${total} insgesamt)`;
+  toggle.textContent = state.servicesExpanded ? `Auf 5 Gottesdienste reduzieren (${total} insgesamt)` : `${total - 5} weitere Gottesdienste anzeigen (${total} insgesamt)`;
+  toggle.append(icon('chevron'));
   body.replaceChildren();
-  if (!total) {
+  if (!total && !state.editor) {
     const row = document.createElement('tr'); row.className = 'empty';
-    const cell = document.createElement('td'); cell.colSpan = 7; cell.textContent = !state.services.length ? 'Noch keine Gottesdienste geladen.'
-      : !$('parish').value.trim() ? 'Bitte eine Gemeinde in Schritt 1 eingeben oder Gottesdienste anderer Gemeinden und Orte anzeigen.'
-        : 'Keine Gottesdienste passen zu dieser Gemeinde. Gemeinde und Ortsangaben prüfen oder Gottesdienste anderer Gemeinden und Orte anzeigen.';
-    row.append(cell); body.append(row); return;
+    const cell = document.createElement('td'); cell.colSpan = 7;
+    cell.textContent = !state.services.length ? 'Noch keine Gottesdienste geladen.' : !$('parish').value.trim() ? 'Bitte eine Gemeinde eingeben oder andere Orte anzeigen.' : 'Keine Gottesdienste passen zu dieser Gemeinde. Andere Orte anzeigen oder Gemeinde prüfen.';
+    row.append(cell); body.append(row);
   }
-  const visibleServices = state.servicesExpanded ? displayed : displayed.slice(0, 5);
-  visibleServices.forEach(({ service, index }) => {
-    const row = document.createElement('tr');
-    row.dataset.index = index;
+  let editorShown = false;
+  (state.servicesExpanded ? displayed : displayed.slice(0, 5)).forEach(({ service, index }) => {
+    const row = document.createElement('tr'); row.className = 'service-row'; row.dataset.index = index;
     fields.forEach((field) => {
-      const cell = document.createElement('td');
-      const label = document.createElement('label');
-      const caption = document.createElement('span'); caption.className = 'field-label'; caption.textContent = labels[field];
-      label.append(caption, inputFor(service, field, index)); cell.append(label); row.append(cell);
+      const cell = document.createElement('td'); cell.dataset.label = labels[field];
+      if (field === 'dayInfo' && !service[field]) cell.dataset.empty = 'true';
+      cell.textContent = field === 'date' ? germanDate(service[field]) : service[field] || '–';
+      row.append(cell);
     });
     const action = document.createElement('td');
-    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'remove'; remove.textContent = '×'; remove.setAttribute('aria-label', `Zeile ${index + 1} löschen`);
-    remove.addEventListener('click', () => { state.services.splice(index, 1); invalidatePlan(); renderServices(); });
-    action.append(remove); row.append(action); body.append(row);
+    const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'edit-service'; actionIcon(edit, 'edit', 'Bearbeiten');
+    edit.setAttribute('aria-label', `${service.name || 'Gottesdienst'} am ${germanDate(service.date)} bearbeiten`);
+    edit.addEventListener('click', () => openEditor(service));
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'delete-service'; actionIcon(remove, 'trash', 'Löschen');
+    remove.setAttribute('aria-label', `${service.name || 'Gottesdienst'} am ${germanDate(service.date)} löschen`);
+    remove.addEventListener('click', () => {
+      const sourceIndex = state.services.indexOf(service);
+      if (sourceIndex < 0) return;
+      state.services.splice(sourceIndex, 1);
+      if (state.editor?.service === service) state.editor = null;
+      invalidatePlan(); renderServices(); focusReview(); message('Gottesdienst gelöscht.', false, 'review');
+    });
+    action.className = 'service-actions'; action.append(edit, remove); row.append(action); body.append(row);
+    if (state.editor?.service === service) { body.append(editorRow()); editorShown = true; }
+  });
+  if (state.editor && !editorShown) body.append(editorRow());
+}
+
+function uploadResult(text, status) {
+  message(text, status === 'error', 'import');
+  $('import-feedback').dataset.state = status;
+  $('source-panel').classList.toggle('has-source', status !== 'idle');
+  $('review-import').hidden = status !== 'success';
+  requestAnimationFrame(() => {
+    const panel = $('import-feedback'); const rect = panel.getBoundingClientRect();
+    if (rect.bottom > window.innerHeight || rect.top < 0) panel.scrollIntoView({ block: 'center' });
   });
 }
 
@@ -109,27 +209,30 @@ async function importFile(file) {
 
 async function importFiles(files) {
   if (!files.length) return;
-  if (state.busy) return;
+  if (state.busy || !discardEditor()) return;
+  document.querySelector('.advanced-options').open = false;
   setBusy(true);
   state.servicesExpanded = false;
+  state.editor = null;
+  state.services = [];
   renderServices();
   invalidatePlan();
   renderSelectedFiles(files);
-  message('Dateien werden lokal verarbeitet …', false, 'import');
+  uploadResult('Dateien ausgewählt · werden lokal verarbeitet …', 'processing');
   try {
     const results = await Promise.all([...files].map(importFile));
     state.services = results.flatMap((result) => result.services);
     state.diagnostics = results.flatMap((result) => result.diagnostics);
     invalidatePlan();
     renderServices(); renderDiagnostics();
-    message(`${state.services.length} Gottesdienste eingelesen. ${state.diagnostics.length} Importhinweise. Bitte kurz prüfen.`, false, 'import');
+    uploadResult(state.services.length ? `${state.services.length} Gottesdienste aus ${files.length} Datei${files.length === 1 ? '' : 'en'} eingelesen. Vorherige Daten wurden ersetzt. Bitte Angaben prüfen.${state.diagnostics.length ? ` ${state.diagnostics.length} Importhinweise unter der Tabelle.` : ''}` : 'Keine Gottesdienste erkannt. Dateiformat und Inhalt prüfen oder eine andere Datei auswählen.', state.services.length ? 'success' : 'error');
   } catch (error) {
     state.services = [];
     state.diagnostics = [];
     invalidatePlan();
     renderServices();
     renderDiagnostics();
-    message(error.message || 'Die Datei konnte nicht gelesen werden.', true, 'import');
+    uploadResult(`Import abgebrochen. Keine der ${files.length} ausgewählten Dateien wurde übernommen. ${error.message || 'Die Datei konnte nicht gelesen werden.'} Bitte Dateien prüfen und erneut auswählen.`, 'error');
   } finally { setBusy(false); }
 }
 
@@ -141,26 +244,19 @@ function setBusy(busy) {
   $('create-plan').disabled = busy || !state.services.length;
 }
 
-function addService() {
-  state.services.push({ date: '', start: '', end: '', name: '', location: $('parish').value, dayInfo: '', source: 'manuell', row: state.services.length + 1 });
-  state.servicesExpanded = true;
-  if (!$('parish').value.trim()) $('show-other-services').checked = true;
-  invalidatePlan();
-  renderServices();
-  const input = $('services').lastElementChild.querySelector('input');
-  input.focus();
-  input.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  message('Neuer Gottesdienst: Datum und Angaben ergänzen.', false, 'review');
-}
+function addService() { openEditor(); }
 
 function loadDemo() {
+  if (!discardEditor()) return;
+  document.querySelector('.advanced-options').open = false;
   $('file-input').value = '';
   renderSelectedFiles([{ name: 'Beispieldaten geladen · 2 Gottesdienste (keine Datei).' }]);
   state.servicesExpanded = false;
+  state.editor = null;
   state.services = [
     { date: '2026-07-01', start: '18:30', end: '19:30', name: 'Eucharistiefeier', location: 'Kirche St. Georg', dayInfo: '', source: 'Beispiel', row: 1 },
     { date: '2026-07-05', start: '10:00', end: '11:00', name: 'Wortgottesdienst', location: 'Kirche St. Georg', dayInfo: '', source: 'Beispiel', row: 2 },
-  ]; state.diagnostics = []; invalidatePlan(); renderServices(); renderDiagnostics(); message('Beispieldaten geladen.', false, 'import');
+  ]; state.diagnostics = []; invalidatePlan(); renderServices(); renderDiagnostics(); uploadResult('Beispieldaten geladen · 2 Gottesdienste. Vorherige Daten wurden ersetzt.', 'success');
 }
 
 async function planningConfig() {
@@ -176,6 +272,7 @@ async function planningConfig() {
 }
 
 async function createPlan() {
+  if (state.editor) { message('Bitte den Entwurf zuerst speichern oder abbrechen.', true, 'review'); return; }
   invalidatePlan();
   setBusy(true);
   message('Miniplan wird vorbereitet …');
@@ -188,7 +285,7 @@ async function createPlan() {
     const preview = $('plan-preview'); preview.replaceChildren();
     const title = document.createElement('h3'); title.textContent = `${state.plan.length} Einträge für den Miniplan`;
     const list = document.createElement('ul');
-    state.plan.slice(0, 6).forEach((item) => { const line = document.createElement('li'); line.textContent = `${item.date} · ${item.start ?? '–'} · ${item.label} (${item.duties.filter(Boolean).join(', ') || 'Wochendienst'})`; list.append(line); });
+    state.plan.slice(0, 6).forEach((item) => { const line = document.createElement('li'); line.textContent = `${germanDate(item.date)} · ${item.start ?? '–'} · ${item.label} (${item.duties.filter(Boolean).join(', ') || 'Wochendienst'})`; list.append(line); });
     if (state.plan.length > 6) { const more = document.createElement('li'); more.textContent = `… und ${state.plan.length - 6} weitere`; list.append(more); }
     preview.append(title, list); $('download').disabled = false; message('Miniplan ist bereit zum Export.');
   } catch (error) {
@@ -219,6 +316,7 @@ async function download() {
   finally { $('download').disabled = !state.plan.length; }
 }
 
+$('review-import').addEventListener('click', focusReview);
 $('file-input').addEventListener('change', (event) => importFiles(event.target.files));
 $('services-toggle').addEventListener('click', () => {
   state.servicesExpanded = !state.servicesExpanded;
@@ -247,3 +345,18 @@ for (const eventName of ['dragenter', 'dragover']) $('file-input').closest('.dro
 for (const eventName of ['dragleave', 'drop']) $('file-input').closest('.dropzone').addEventListener(eventName, (event) => { event.preventDefault(); event.currentTarget.classList.remove('dragging'); });
 $('file-input').closest('.dropzone').addEventListener('drop', (event) => importFiles(event.dataTransfer.files));
 invalidatePlan();
+
+for (const node of document.querySelectorAll('[data-icon]')) node.prepend(icon(node.dataset.icon));
+
+const settings = document.querySelector('.advanced-options');
+const closeSettings = document.createElement('button');
+closeSettings.type = 'button'; closeSettings.className = 'settings-close';
+closeSettings.setAttribute('aria-label', 'Einstellungen schließen');
+actionIcon(closeSettings, 'close', 'Schließen');
+settings.querySelector('.settings-panel').prepend(closeSettings);
+closeSettings.addEventListener('click', () => { settings.open = false; settings.querySelector('summary').focus(); });
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && settings.open) { settings.open = false; settings.querySelector('summary').focus(); }
+});
+
+document.addEventListener('pointerdown', (event) => { if (settings.open && !settings.contains(event.target)) settings.open = false; });

@@ -3,51 +3,46 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Miniplan · St. Georg</title>
+  <title>MiniPlan · Gottesdienste</title>
   <style>/* INLINE_CSS */</style>
 </head>
 <body>
   <main class="shell">
-    <header class="hero">
-      <p class="eyebrow">Für deine Gemeinde</p>
-      <h1>Miniplan erstellen</h1>
-      <p>Plan hochladen, kurz prüfen, als Tabelle herunterladen. Deine Dateien verlassen dieses Gerät nicht.</p>
-    </header>
-
-    <section class="card" aria-labelledby="import-title">
-      <div class="section-heading"><span class="step">1</span><div><h2 id="import-title">Gottesdienstplan einlesen</h2><p>PDF, Excel, OpenDocument oder CSV aus dem Pfarrbüro auswählen.</p></div></div>
-      <label class="dropzone" for="file-input"><input id="file-input" type="file" accept=".pdf,.xlsx,.ods,.csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.oasis.opendocument.spreadsheet,text/csv" multiple><strong>Dateien auswählen</strong><span>oder hierher ziehen · PDF, XLSX, ODS und CSV</span></label>
-      <ul id="selected-files" class="selected-files" aria-live="polite"><li class="file-placeholder">Noch keine Datei ausgewählt.</li></ul>
-      <div class="options"><label>Gemeinde <input id="parish" value="St. Georg" autocomplete="organization"></label><button id="load-demo" class="ghost" type="button">Beispieldaten laden</button></div>
-      <div id="import-feedback" class="feedback"><p id="message" class="message" role="status" aria-live="polite"></p></div>
-      <details class="advanced-options"><summary>Erweiterte Einstellungen</summary><p>Passe die Dienste mit eigenen Planungsregeln an. Eigene Ferien- und Feiertagskalender ersetzen die voreingestellten Kalender für Baden-Württemberg.</p><div class="options"><label>Eigene Planungsregeln laden <input id="rules-input" type="file" accept=".json,application/json"></label><label>Eigene Ferien- und Feiertagskalender laden <input id="calendar-input" type="file" accept=".ics,text/calendar" multiple></label><label class="check"><input id="no-calendar" type="checkbox"> Ferien- und Feiertagsprüfung deaktivieren</label></div></details>
-    </section>
-
-    <section class="card" aria-labelledby="review-title">
-      <div class="section-heading"><span class="step">2</span><div><h2 id="review-title">Gottesdienste prüfen</h2><p>Prüfe Datum, Uhrzeit und Ort. Alle Angaben lassen sich bearbeiten.</p></div><button id="add-service" class="ghost compact" type="button">+ Gottesdienst hinzufügen</button></div>
-      <label class="check service-filter"><input id="show-other-services" type="checkbox"> Gottesdienste anderer Gemeinden und Orte anzeigen</label><p class="hint">Diese Auswahl ändert nur die Anzeige, nicht die Planung.</p>
-      <div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>Datum</th><th>Beginn</th><th>Ende</th><th>Gottesdienst</th><th>Ort</th><th>Info</th><th></th></tr></thead><tbody id="services"><tr class="empty"><td colspan="7">Noch keine Gottesdienste geladen.</td></tr></tbody></table></div>
-      <button id="services-toggle" class="services-toggle" type="button" aria-expanded="false" aria-controls="services" hidden></button></div>
-      <div id="review-feedback" class="feedback"></div>
-      <details id="diagnostics-disclosure" class="diagnostics" hidden>
-        <summary id="diagnostics-summary">Importhinweise anzeigen / ausblenden</summary>
-        <div id="diagnostics"></div>
+    <header class="app-header">
+      <a class="brand" href="#">MiniPlan<span>Dienstplanung</span></a>
+      <span class="local-note">Lokal auf deinem Gerät</span>
+      <details class="advanced-options">
+        <summary class="utility" aria-label="Einstellungen und Hilfe" data-icon="settings"><span>Einstellungen</span><span class="tooltip" aria-hidden="true">Einstellungen &amp; Hilfe</span></summary>
+        <div class="settings-panel">
+          <h2>Einstellungen &amp; Hilfe</h2>
+          <p>Eigene ICS-Kalender ersetzen die mitgelieferten Kalender für Baden-Württemberg. Prüfe die enthaltenen Zeiträume.</p>
+          <label>Planungsregeln (JSON)<input id="rules-input" type="file" accept=".json,application/json"></label>
+          <label>Ferien &amp; Feiertage (ICS)<input id="calendar-input" type="file" accept=".ics,text/calendar" multiple></label>
+          <label class="check"><input id="no-calendar" type="checkbox"> Ferien- und Feiertagsprüfung deaktivieren</label>
+          <p>PDF benötigt eine Textschicht und das unterstützte Pfarrbüro-Layout. Nach dem Import Angaben prüfen.</p>
+          <button id="load-demo" class="ghost" type="button">Beispieldaten laden</button>
+        </div>
       </details>
-    </section>
-
-    <section class="card action-card" aria-labelledby="export-title">
-      <div class="section-heading"><span class="step">3</span><div><h2 id="export-title">Miniplan erzeugen</h2><p id="calendar-help" aria-live="polite">Ferien und Feiertage in Baden-Württemberg werden berücksichtigt.</p></div></div>
-      <div class="actions">
-        <button id="create-plan" class="primary" type="button">Miniplan vorbereiten</button>
-        <label class="format-field"><span>Ausgabeformat</span><select id="export-format" aria-label="Exportformat"><option value="ods" selected>OpenDocument (.ods)</option><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV (.csv)</option></select></label>
-        <button id="download" aria-describedby="download-help" class="primary" type="button" disabled>Datei herunterladen</button>
+    </header>
+    <div class="workspace-heading"><div><p class="eyebrow">Gottesdienste → Miniplan</p><h1>Deine Planung.</h1></div><p>Einlesen, prüfen, exportieren.</p></div>
+    <section id="source-panel" class="source-panel" aria-labelledby="import-title">
+      <div class="upload-area">
+        <div class="import-intro"><span class="upload-symbol" data-icon="upload"></span><h2 id="import-title">Gottesdienstplan öffnen</h2><p>Wähle den Plan aus dem Pfarrbüro.</p></div>
+        <label class="dropzone" for="file-input"><input id="file-input" type="file" accept=".pdf,.xlsx,.ods,.csv,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.oasis.opendocument.spreadsheet,text/csv" multiple><span class="upload-control" data-icon="upload">Datei auswählen</span><span class="file-types">PDF, XLSX, ODS, CSV · auch per Drag &amp; Drop</span></label>
+        <div class="source-result"><ul id="selected-files" class="selected-files" aria-live="polite"><li class="file-placeholder">Noch keine Datei ausgewählt</li></ul><div id="import-feedback" class="feedback" data-state="idle"><p id="message" class="message" role="status" aria-live="polite">Dateien werden ausschließlich lokal verarbeitet.</p><button id="review-import" class="ghost compact" type="button" hidden>Gottesdienste prüfen</button></div></div>
       </div>
-      <p id="download-help" class="hint">Zuerst den Miniplan vorbereiten, dann die Datei herunterladen.</p>
-      <div id="export-feedback" class="feedback"></div>
-      <div id="plan-preview" class="preview" hidden></div>
     </section>
+    <section class="workspace card" aria-labelledby="review-title">
+      <div class="list-heading"><div><h2 id="review-title" tabindex="-1">Gottesdienste</h2><p id="service-count">Noch keine Einträge</p></div><button id="add-service" class="ghost" type="button" data-icon="plus">Hinzufügen</button></div>
+      <div class="review-toolbar"><label class="parish-field">Eigene Gemeinde<input id="parish" value="St. Georg" autocomplete="organization"></label><div><label class="check service-filter"><input id="show-other-services" type="checkbox"> Andere Gemeinden anzeigen</label><p class="hint">Nur die Ansicht · alle Importdaten bleiben erhalten</p></div></div>
+      <div class="table-wrap"><div class="table-scroll"><table><colgroup><col class="col-date"><col class="col-time"><col class="col-time"><col class="col-name"><col class="col-location"><col class="col-info"><col class="col-actions"></colgroup><thead><tr><th scope="col">Datum</th><th scope="col">Beginn</th><th scope="col">Ende</th><th scope="col">Gottesdienst</th><th scope="col">Ort</th><th scope="col">Info</th><th scope="col"><span class="sr-only">Aktionen</span></th></tr></thead><tbody id="services"><tr class="empty"><td colspan="7">Öffne einen Plan oder füge einen Gottesdienst hinzu.</td></tr></tbody></table></div>
+      <button id="services-toggle" class="services-toggle" type="button" aria-expanded="false" aria-controls="services" hidden></button></div>
+      <div id="review-feedback" class="feedback"><p id="review-message" class="message" role="status" aria-live="polite"></p></div>
+      <details id="diagnostics-disclosure" class="diagnostics" hidden><summary id="diagnostics-summary">Importhinweise anzeigen / ausblenden</summary><div id="diagnostics"></div></details>
+      <section class="export-area" aria-labelledby="export-title"><div class="export-heading"><h2 id="export-title">Miniplan</h2><p id="calendar-help" aria-live="polite">Ferien und Feiertage in Baden-Württemberg werden berücksichtigt.</p></div><div class="actions"><label class="format-field"><span>Format</span><select id="export-format" aria-label="Exportformat"><option value="ods" selected>OpenDocument (.ods)</option><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV (.csv)</option></select></label><button id="create-plan" class="primary" type="button">Miniplan vorbereiten</button><button id="download" aria-describedby="download-help" class="ghost" type="button" data-icon="download" disabled>Herunterladen</button></div><p id="download-help" class="hint">Vorbereiten, Vorschau prüfen und herunterladen.</p><div id="export-feedback" class="feedback"><p id="export-message" class="message" role="status" aria-live="polite"></p></div><div id="plan-preview" class="preview" hidden></div></section>
+    </section>
+    <footer><span>Ohne Konto. Ohne Übertragung deiner Dateien.</span><a class="repository-link" href="https://github.com/Zwiebelrostbraten/miniplan" aria-label="MiniPlan auf GitHub"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 .75a11.25 11.25 0 0 0-3.56 21.92c.56.1.77-.24.77-.54v-2.1c-3.13.68-3.79-1.33-3.79-1.33-.51-1.3-1.25-1.65-1.25-1.65-1.02-.7.08-.69.08-.69 1.13.08 1.73 1.16 1.73 1.16 1 1.72 2.63 1.22 3.27.93.1-.73.39-1.22.71-1.5-2.5-.29-5.13-1.25-5.13-5.56 0-1.23.44-2.23 1.16-3.02-.12-.28-.5-1.43.11-2.98 0 0 .94-.3 3.09 1.15a10.76 10.76 0 0 1 5.62 0c2.15-1.45 3.09-1.15 3.09-1.15.61 1.55.23 2.7.11 2.98.72.79 1.16 1.79 1.16 3.02 0 4.32-2.63 5.27-5.14 5.55.4.35.76 1.03.76 2.08v3.11c0 .3.2.65.77.54A11.25 11.25 0 0 0 12 .75Z"/></svg><span>GitHub</span></a></footer>
   </main>
-  <footer>Ohne Konto und auch ohne Internet nutzbar.</footer>
   <script>/* INLINE_JS */</script>
 </body>
 </html>
